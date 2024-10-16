@@ -12,7 +12,6 @@ const chatBox = document.getElementById('chat-box');
 // Variables para mantener el estado de la conversación
 let nombreUsuario = '';
 let estado = 'inicio'; // Puede cambiar a "pregunta nombre", "conversación", etc.
-let mencionLorena = false;
 
 // Evento para empezar a escuchar cuando haces clic en el botón
 startBtn.addEventListener('click', () => {
@@ -42,12 +41,12 @@ function procesarEntrada(texto) {
         respuesta = 'Hola, ¿cómo te llamas?';
         estado = 'pregunta nombre';
     } else if (estado === 'pregunta nombre') {
-        nombreUsuario = texto.trim();
-        respuesta = `Mucho gusto, ${nombreUsuario}. ¿En qué puedo ayudarte hoy?`;
+        nombreUsuario = texto.trim().replace('me llamo', '').trim(); // Quitar "me llamo" y capturar solo el nombre
+        respuesta = `Mucho gusto, ${nombreUsuario}. Yo soy Robot. ¿En qué puedo ayudarte hoy?`;
         estado = 'conversación';
     } else if (estado === 'conversación') {
         if (texto.includes('cómo estás')) {
-            respuesta = 'Hola Jhan, estoy bien, gracias por preguntar. ¿Cómo está todo contigo y Lorena?';
+            respuesta = `Hola ${nombreUsuario}, estoy bien, gracias por preguntar. ¿Cómo está todo contigo y Lorena?`;
         } else if (texto.includes('y qué haces')) {
             respuesta = 'Estoy pensando en lo que me dijiste en la mañana, sobre demostrarle a Lorena que todo es posible.';
         } else if (texto.includes('qué te dije en la mañana')) {
