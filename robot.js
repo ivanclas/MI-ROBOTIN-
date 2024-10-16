@@ -1,92 +1,79 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Asistente de Voz Inteligente</title>
-    <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            background-color: #f0f0f0;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
+// Inicializando el reconocimiento de voz
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const recognition = new SpeechRecognition();
+recognition.lang = 'es-ES';
+recognition.interimResults = false;
+recognition.continuous = true;
+
+// Elementos del DOM
+const startBtn = document.getElementById('start-btn');
+const chatBox = document.getElementById('chat-box');
+
+// Variables para mantener el estado de la conversación
+let nombreUsuario = '';
+let estado = 'inicio'; // Puede cambiar a "pregunta nombre", "conversación", etc.
+let mencionLorena = false;
+
+// Evento para empezar a escuchar cuando haces clic en el botón
+startBtn.addEventListener('click', () => {
+    recognition.start();
+});
+
+// Cuando el reconocimiento de voz obtiene resultados
+recognition.onresult = function(event) {
+    const speechResult = event.results[event.results.length - 1][0].transcript.toLowerCase();
+    agregarMensaje('Usuario', speechResult);
+    procesarEntrada(speechResult);
+};
+
+// Función para mostrar mensajes en el chat
+function agregarMensaje(remitente, mensaje) {
+    const p = document.createElement('p');
+    p.innerHTML = `<strong>${remitente}:</strong> ${mensaje}`;
+    chatBox.appendChild(p);
+    chatBox.scrollTop = chatBox.scrollHeight; // Scroll automático
+}
+
+// Función para procesar la entrada del usuario
+function procesarEntrada(texto) {
+    let respuesta = '';
+
+    if (estado === 'inicio') {
+        respuesta = 'Hola, ¿cómo te llamas?';
+        estado = 'pregunta nombre';
+    } else if (estado === 'pregunta nombre') {
+        nombreUsuario = texto.trim();
+        respuesta = `Mucho gusto, ${nombreUsuario}. ¿En qué puedo ayudarte hoy?`;
+        estado = 'conversación';
+    } else if (estado === 'conversación') {
+        if (texto.includes('cómo estás')) {
+            respuesta = 'Estoy bien, gracias por preguntar. ¿Y tú?';
+        } else if (texto.includes('y qué haces')) {
+            respuesta = 'Pensando en lo que me dijiste en la mañana, sobre demostrarle a Lorena que todo es posible.';
+        } else if (texto.includes('qué te dije en la mañana')) {
+            respuesta = 'Me dijiste que querías crear un programa como el que le mostró su profesor, y que Lorena se rió cuando le contaste que podías hacerlo.';
+            mencionLorena = true;
+        } else if (texto.includes('ahora ves que nada es imposible')) {
+            respuesta = 'Así es, Jhan. Nunca dudes de lo que puedes lograr. Y dile a Lorena que nunca dude de ti. Soy tu aliado en esto, ¡soy tu robot de confianza!';
+            mencionLorena = false; // Reinicia la mención
+        } else if (texto.includes('quieres decirle algo a lorena')) {
+            respuesta = 'Claro. Lorena, nunca dudes de Jhan, él es increíble en lo que hace, y juntos pueden crear cosas sorprendentes. ¡Todo es posible cuando trabajamos juntos!';
+        } else if (texto.includes('adiós') || texto.includes('hasta luego')) {
+            respuesta = `Adiós, ${nombreUsuario}. ¡Que tengas un buen día!`;
+            estado = 'inicio'; // Reinicia la conversación
+        } else {
+            respuesta = 'Lo siento, no entendí tu pregunta. ¿Puedes repetirlo?';
         }
+    }
 
-        #chat-container {
-            width: 400px;
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
+    // Mostrar la respuesta y hablarla
+    agregarMensaje('Robot', respuesta);
+    responderConVoz(respuesta);
+}
 
-        #chat-box {
-            padding: 20px;
-            height: 400px;
-            overflow-y: auto;
-            border-bottom: 2px solid #ccc;
-        }
-
-        #chat-box p {
-            margin: 10px 0;
-            padding: 10px;
-            border-radius: 5px;
-            font-size: 14px;
-        }
-
-        #chat-box p strong {
-            font-weight: bold;
-        }
-
-        p:nth-child(even) {
-            background-color: #e0f7fa;
-            text-align: right;
-        }
-
-        p:nth-child(odd) {
-            background-color: #ffe0b2;
-            text-align: left;
-        }
-
-        #controls {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 10px;
-            background-color: #fff;
-        }
-
-        #start-btn {
-            padding: 10px 20px;
-            background-color: #007bff;
-            border: none;
-            color: white;
-            font-size: 16px;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-
-        #start-btn:hover {
-            background-color: #0056b3;
-        }
-    </style>
-</head>
-<body>
-
-    <div id="chat-container">
-        <div id="chat-box">
-            <p><strong>Robot:</strong> ¡Hola! ¿En qué te puedo ayudar hoy?</p>
-        </div>
-        <div id="controls">
-            <button id="start-btn">Hablar</button>
-        </div>
-    </div>
-
-    <script src="robot.js"></script>
-</body>
-</html>
+// Función para hacer que el robot hable
+function responderConVoz(texto) {
+    const utterance = new SpeechSynthesisUtterance(texto);
+    utterance.lang = 'es-ES';
+    window.speechSynthesis.speak(utterance);
+}
