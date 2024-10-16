@@ -41,7 +41,6 @@ function procesarEntrada(texto) {
         respuesta = 'Hola, ¿cómo te llamas?';
         estado = 'pregunta nombre';
     } else if (estado === 'pregunta nombre') {
-        nombreUsuario = texto.trim().replace('me llamo', '').trim(); // Quitar "me llamo" y capturar solo el nombre
         respuesta = `Mucho gusto, ${nombreUsuario}. Yo soy Robot. ¿En qué puedo ayudarte hoy?`;
         estado = 'conversación';
     } else if (estado === 'conversación') {
