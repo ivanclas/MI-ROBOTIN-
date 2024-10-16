@@ -47,15 +47,13 @@ function procesarEntrada(texto) {
         estado = 'conversación';
     } else if (estado === 'conversación') {
         if (texto.includes('cómo estás')) {
-            respuesta = 'Estoy bien, gracias por preguntar. ¿Y tú?';
+            respuesta = 'Hola Jhan, estoy bien, gracias por preguntar. ¿Cómo está todo contigo y Lorena?';
         } else if (texto.includes('y qué haces')) {
-            respuesta = 'Pensando en lo que me dijiste en la mañana, sobre demostrarle a Lorena que todo es posible.';
+            respuesta = 'Estoy pensando en lo que me dijiste en la mañana, sobre demostrarle a Lorena que todo es posible.';
         } else if (texto.includes('qué te dije en la mañana')) {
             respuesta = 'Me dijiste que querías crear un programa como el que le mostró su profesor, y que Lorena se rió cuando le contaste que podías hacerlo.';
-            mencionLorena = true;
         } else if (texto.includes('ahora ves que nada es imposible')) {
             respuesta = 'Así es, Jhan. Nunca dudes de lo que puedes lograr. Y dile a Lorena que nunca dude de ti. Soy tu aliado en esto, ¡soy tu robot de confianza!';
-            mencionLorena = false; // Reinicia la mención
         } else if (texto.includes('quieres decirle algo a lorena')) {
             respuesta = 'Claro. Lorena, nunca dudes de Jhan, él es increíble en lo que hace, y juntos pueden crear cosas sorprendentes. ¡Todo es posible cuando trabajamos juntos!';
         } else if (texto.includes('adiós') || texto.includes('hasta luego')) {
