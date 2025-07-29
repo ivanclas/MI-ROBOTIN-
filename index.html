@@ -1,92 +1,387 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Asistente de Voz Inteligente</title>
-    <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            background-color: #f0f0f0;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CHAPI</title>
+  <!-- Enlace a Font Awesome para los iconos -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
-        #chat-container {
-            width: 400px;
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
+  <style>
+    /* Estilos generales */
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(45deg, #5c6bc0, #42a5f5);
+      margin: 0;
+      padding: 0;
+      color: white;
+      text-align: center;
+      overflow-x: hidden;
+    }
 
-        #chat-box {
-            padding: 20px;
-            height: 400px;
-            overflow-y: auto;
-            border-bottom: 2px solid #ccc;
-        }
+    h1 {
+      font-size: 3.5rem;
+      color: white;
+      font-weight: 700;
+      margin-top: 50px;
+      text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.2);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 15px;
+      animation: fadeIn 1s ease-out;
+    }
 
-        #chat-box p {
-            margin: 10px 0;
-            padding: 10px;
-            border-radius: 5px;
-            font-size: 14px;
-        }
+    h1 i {
+      font-size: 3.5rem;
+      color: #ff4081;
+      transition: transform 0.3s ease-in-out;
+    }
 
-        #chat-box p strong {
-            font-weight: bold;
-        }
+    h1:hover i {
+      transform: rotate(360deg);
+    }
 
-        p:nth-child(even) {
-            background-color: #e0f7fa;
-            text-align: right;
-        }
+    /* Contenedor principal */
+    .container {
+      padding: 30px;
+      width: 90%;
+      max-width: 480px;
+      margin: 0 auto;
+      animation: slideIn 1.2s ease-out;
+    }
 
-        p:nth-child(odd) {
-            background-color: #ffe0b2;
-            text-align: left;
-        }
+    /* Estilo para los botones */
+    button {
+      background-color: #ff4081;
+      color: white;
+      padding: 15px;
+      margin: 20px 0;
+      border: none;
+      border-radius: 12px;
+      font-size: 1.4rem;
+      cursor: pointer;
+      width: 100%;
+      box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
 
-        #controls {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 10px;
-            background-color: #fff;
-        }
+    button:hover {
+      background-color: #d81b60;
+      transform: translateY(-4px);
+      box-shadow: 0 12px 25px rgba(0, 0, 0, 0.25);
+    }
 
-        #start-btn {
-            padding: 10px 20px;
-            background-color: #007bff;
-            border: none;
-            color: white;
-            font-size: 16px;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
+    button:active {
+      transform: translateY(0);
+    }
 
-        #start-btn:hover {
-            background-color: #0056b3;
-        }
-    </style>
+    button i {
+      margin-right: 12px;
+    }
+
+    /* Estilo de los inputs */
+    input {
+      padding: 14px;
+      margin: 12px 0;
+      width: 90%;
+      font-size: 1.1rem;
+      border: none;
+      border-radius: 10px;
+      background-color: #fff;
+      color: #333;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+    }
+
+    input:focus {
+      border: 2px solid #ff4081;
+      outline: none;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Contenedor de los formularios emergentes (modales) */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.6); /* Fondo oscuro */
+      overflow: auto;
+      padding-top: 60px;
+      transition: opacity 0.3s ease;
+      animation: fadeInModal 0.5s ease-out;
+    }
+
+    /* Animación de aparición del modal */
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes fadeInModal {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    /* Modal content */
+    .modal-content {
+      background-color: #fff;
+      margin: 5% auto;
+      padding: 25px;
+      border-radius: 20px;
+      width: 80%;
+      max-width: 500px;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+      animation: zoomIn 0.5s ease-out;
+    }
+
+    /* Estilos para el cierre del modal */
+    .close {
+      color: #aaa;
+      font-size: 32px;
+      font-weight: bold;
+      float: right;
+      cursor: pointer;
+    }
+
+    .close:hover,
+    .close:focus {
+      color: #000;
+    }
+
+    /* Estilo de la animación del botón y el modal */
+    @keyframes slideIn {
+      from {
+        transform: translateY(-50px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes zoomIn {
+      from {
+        transform: scale(0.7);
+        opacity: 0;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 2.5rem;
+      }
+      button {
+        font-size: 1.2rem;
+      }
+      .modal-content {
+        width: 90%;
+      }
+      input {
+        font-size: 1.1rem;
+      }
+    }
+  </style>
 </head>
 <body>
+  <div class="container">
+    <h1><i class="fas fa-robot"></i> ¡Hola! Soy CHAPI</h1>
 
-    <div id="chat-container">
-        <div id="chat-box">
-            <p><strong>Robot:</strong> ¡Hola! ¿En qué te puedo ayudar hoy?</p>
-        </div>
-        <div id="controls">
-            <button id="start-btn">Hablar</button>
-        </div>
+    <!-- Botones para agregar o consultar -->
+    <button id="btnAgregar"><i class="fas fa-plus-circle"></i> Agregar pregunta</button>
+    <button id="btnConsultar"><i class="fas fa-search"></i> Consultar pregunta</button>
+    <button id="btnVoz"><i class="fas fa-microphone"></i> Hablar pregunta</button> <!-- Botón para activar voz -->
+    <p>Agrega tus preguntas y CHAPI las recordará para ti.</p>
+
+    <!-- Modal de "Agregar pregunta" -->
+    <div id="modalAgregar" class="modal">
+      <div class="modal-content">
+        <span class="close" id="closeAgregar">&times;</span>
+        <h2>Agregar una nueva pregunta</h2>
+        <input type="text" id="inputPregunta" placeholder="Escribe la pregunta" required>
+        <input type="text" id="inputRespuesta" placeholder="Escribe la respuesta" required>
+        <button id="guardarBtn">Guardar pregunta</button>
+        <button onclick="ocultarFormulario('modalAgregar')">Cancelar</button>
+      </div>
     </div>
 
-    <script src="robot.js"></script>
+    <!-- Modal de "Consultar pregunta" -->
+    <div id="modalConsultar" class="modal">
+      <div class="modal-content">
+        <span class="close" id="closeConsultar">&times;</span>
+        <h2>Consultar una pregunta</h2>
+        <input type="text" id="consultaPregunta" placeholder="Consulta tu pregunta">
+        <button id="consultarBtn">Consultar pregunta</button>
+        <p id="respuesta"></p>
+        <button onclick="ocultarFormulario('modalConsultar')">Cancelar</button>
+      </div>
+    </div>
+
+    <!-- Elemento para mostrar el estado del reconocimiento de voz -->
+    <p id="voiceStatus"></p>
+  </div>
+
+  <!-- Firebase SDK: Importación como módulos -->
+  <script type="module" src="https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js"></script>
+  <script type="module" src="https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js"></script>
+
+  <script type="module">
+    // Importar las funciones necesarias de Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+    import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js";
+
+    // Configuración de Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyD8Qixd8Q5DFYu0a5l5jiYC2ODrUbnjwuk",
+      authDomain: "guardar-fotos-ec316.firebaseapp.com",
+      databaseURL: "https://guardar-fotos-ec316-default-rtdb.firebaseio.com",
+      projectId: "guardar-fotos-ec316",
+      storageBucket: "guardar-fotos-ec316.appspot.com",
+      messagingSenderId: "529201655026",
+      appId: "1:529201655026:web:f10e873d825a72b5d8b46b",
+      measurementId: "G-SMEHYGBPRR"
+    };
+
+    // Inicializar Firebase
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);  // Inicializamos la base de datos
+
+    // Función para normalizar texto (eliminar acentos y convertir a minúsculas)
+    function normalizeText(text) {
+      return text
+        .normalize("NFD")  // Normaliza caracteres especiales
+        .replace(/[\u0300-\u036f]/g, "")  // Elimina los acentos
+        .toLowerCase();  // Convierte a minúsculas
+    }
+
+    // Función para guardar datos en Firebase Realtime Database
+    function guardarDatos(pregunta, respuesta) {
+      const reference = ref(database, 'recordatorios/' + normalizeText(pregunta));  // Usamos la pregunta normalizada como ID
+      set(reference, {
+        respuesta: respuesta,
+      })
+      .then(() => {
+        alert("Datos guardados correctamente.");
+        ocultarFormulario("modalAgregar");  // Ocultamos el formulario de agregar después de guardar
+      })
+      .catch((error) => {
+        console.error("Error al guardar los datos:", error);
+      });
+    }
+
+    // Función para recuperar datos de Firebase Realtime Database
+    function recuperarDatos(pregunta) {
+      const reference = ref(database, 'recordatorios/');  // Vamos a buscar en todas las preguntas almacenadas
+      const normalizedPregunta = normalizeText(pregunta); // Convertir la pregunta del usuario a minúsculas y eliminar acentos
+
+      get(reference)
+        .then((snapshot) => {
+          let found = false;
+          if (snapshot.exists()) {
+            const data = snapshot.val();
+            for (let key in data) {
+              // Compara la pregunta almacenada con la pregunta del usuario, ambas normalizadas
+              if (normalizeText(key) === normalizedPregunta) {
+                document.getElementById("respuesta").textContent = "Respuesta: " + data[key].respuesta;
+                hablarRespuesta(data[key].respuesta);  // Hacer que CHAPIE hable la respuesta
+                found = true;
+                break;  // Salir del ciclo si se encuentra la respuesta
+              }
+            }
+          }
+
+          if (!found) {
+            document.getElementById("respuesta").textContent = "No se encontró la pregunta.";
+            hablarRespuesta("Lo siento, no tengo una respuesta para eso.");  // Respuesta en voz si no se encuentra
+          }
+        })
+        .catch((error) => {
+          console.error("Error al recuperar los datos:", error);
+        });
+    }
+
+    // Mostrar formularios al hacer clic en los botones
+    document.getElementById("btnAgregar").addEventListener("click", function() {
+      mostrarFormulario("modalAgregar");
+    });
+    document.getElementById("btnConsultar").addEventListener("click", function() {
+      mostrarFormulario("modalConsultar");
+    });
+
+    // Función para mostrar los formularios correspondientes
+    function mostrarFormulario(formularioId) {
+      // Ocultar todos los formularios primero
+      document.getElementById("modalAgregar").style.display = "none";
+      document.getElementById("modalConsultar").style.display = "none";
+
+      // Mostrar el formulario seleccionado
+      document.getElementById(formularioId).style.display = "block";
+    }
+
+    // Función para ocultar formularios
+    function ocultarFormulario(formularioId) {
+      document.getElementById(formularioId).style.display = "none";
+    }
+
+    // Agregar evento al botón de guardar para invocar guardarDatos
+    document.getElementById("guardarBtn").addEventListener("click", function() {
+      const pregunta = document.getElementById("inputPregunta").value;
+      const respuesta = document.getElementById("inputRespuesta").value;
+      guardarDatos(pregunta, respuesta);
+    });
+
+    // Agregar evento al botón de consultar para invocar recuperarDatos
+    document.getElementById("consultarBtn").addEventListener("click", function() {
+      const pregunta = document.getElementById("consultaPregunta").value;
+      recuperarDatos(pregunta);
+    });
+
+    // Configuración del reconocimiento de voz (SpeechRecognition API)
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = "es-ES";  // Establecer el idioma a español
+
+    // Evento cuando se detecta la voz
+    recognition.onresult = function(event) {
+      const question = event.results[0][0].transcript;  // Tomar la primera respuesta
+      document.getElementById("voiceStatus").textContent = `Pregunta escuchada: ${question}`;
+      recuperarDatos(question);  // Consultar la pregunta en Firebase
+    };
+
+    // Función para iniciar el reconocimiento de voz
+    document.getElementById("btnVoz").addEventListener("click", function() {
+      recognition.start();
+      document.getElementById("voiceStatus").textContent = "Escuchando...";
+    });
+
+    // Función para que CHAPIE hable la respuesta
+    function hablarRespuesta(respuesta) {
+      const speech = new SpeechSynthesisUtterance(respuesta);  // Crear un objeto de voz
+      speech.lang = "es-ES";  // Establecer el idioma a español
+      window.speechSynthesis.speak(speech);  // Hacer hablar a CHAPIE
+    }
+
+    // Función para cerrar el modal de agregar pregunta
+    document.getElementById("closeAgregar").addEventListener("click", function() {
+      ocultarFormulario("modalAgregar");
+    });
+
+    // Función para cerrar el modal de consultar pregunta
+    document.getElementById("closeConsultar").addEventListener("click", function() {
+      ocultarFormulario("modalConsultar");
+    });
+  </script>
 </body>
 </html>
