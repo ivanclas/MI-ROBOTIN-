@@ -87,7 +87,7 @@
     input {
       padding: 14px;
       margin: 12px 0;
-      width: 90%;
+      width: 80%;
       font-size: 1.1rem;
       border: none;
       border-radius: 10px;
@@ -259,11 +259,13 @@
     const app = initializeApp(firebaseConfig);
     const database = getDatabase(app);  // Inicializamos la base de datos
 
-    // Función para normalizar texto (eliminar acentos y convertir a minúsculas)
+    // Función para normalizar texto (eliminar espacios, comas, puntos y convertir a minúsculas)
     function normalizeText(text) {
       return text
         .normalize("NFD")  // Normaliza caracteres especiales
         .replace(/[\u0300-\u036f]/g, "")  // Elimina los acentos
+        .replace(/[^\w\s]/g, "")  // Elimina caracteres especiales (comas, puntos, etc.)
+        .replace(/\s+/g, "")  // Elimina los espacios en blanco
         .toLowerCase();  // Convierte a minúsculas
     }
 
