@@ -1,0 +1,21 @@
+{
+  "name": "CHAPI",
+  "short_name": "CHAPI",
+  "description": "TU MEJOR AMIGO DE LOS RECUERDOS",
+  "start_url": "/MI-ROBOTIN-/index.html",  
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4CAF50",
+  "icons": [
+    {
+      "src": "friends.png",  
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "friends.png",  
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
