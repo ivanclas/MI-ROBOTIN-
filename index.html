@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CHAPI</title>
-  <!-- Enlace a Font Awesome para los iconos -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
- <link rel="icon" href="friends.png" type="image/png">
- <link rel="manifest" href="manifest.json" /> 
+  <link rel="icon" href="friends.png" type="image/png">
+  <link rel="manifest" href="manifest.json" /> 
+  <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.4.6/dist/fuse.min.js"></script> <!-- Agregamos Fuse.js -->
   <style>
     /* Estilos generales */
     body {
@@ -235,7 +235,6 @@
     <p id="voiceStatus"></p>
   </div>
 
-  <!-- Firebase SDK: Importación como módulos -->
   <script type="module" src="https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js"></script>
   <script type="module" src="https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js"></script>
 
@@ -260,6 +259,12 @@
     const app = initializeApp(firebaseConfig);
     const database = getDatabase(app);  // Inicializamos la base de datos
 
+    // Diccionario de sinónimos
+    const sinonimos = {
+      "hora": ["hora", "qué hora es", "me puedes decir la hora", "dime la hora", "qué hora tienes"],
+      "fecha": ["fecha", "qué fecha es", "cuál es la fecha de hoy", "dime la fecha", "qué día es hoy"]
+    };
+
     // Función para normalizar texto (eliminar espacios, comas, puntos y convertir a minúsculas)
     function normalizeText(text) {
       return text
@@ -268,6 +273,37 @@
         .replace(/[^\w\s]/g, "")  // Elimina caracteres especiales (comas, puntos, etc.)
         .replace(/\s+/g, "")  // Elimina los espacios en blanco
         .toLowerCase();  // Convierte a minúsculas
+    }
+
+    // Función para expandir la consulta con sinónimos
+    function expandirConsulta(pregunta) {
+      for (const key in sinonimos) {
+        sinonimos[key].forEach(sinonimo => {
+          if (pregunta.toLowerCase().includes(sinonimo)) {
+            return key;  // Devolver la categoría de la pregunta (hora, fecha, etc.)
+          }
+        });
+      }
+      return pregunta;  // Si no encuentra sinónimos, retorna la pregunta tal cual
+    }
+
+    // Función para obtener la hora actual en formato de 12 horas con AM/PM
+    function obtenerHoraActual() {
+      const ahora = new Date();
+      let horas = ahora.getHours();
+      const minutos = ahora.getMinutes().toString().padStart(2, '0');
+      const segundos = ahora.getSeconds().toString().padStart(2, '0');
+      const ampm = horas >= 12 ? 'PM' : 'AM';
+      horas = horas % 12; // Convertir a formato de 12 horas
+      horas = horas ? horas : 12; // El valor 0 debería ser 12
+      return `La hora actual es: ${horas}:${minutos}:${segundos} ${ampm}`;
+    }
+
+    // Función para obtener la fecha actual en formato completo
+    function obtenerFechaActual() {
+      const ahora = new Date();
+      const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      return `Hoy es: ${ahora.toLocaleDateString('es-ES', opciones)}`;
     }
 
     // Función para guardar datos en Firebase Realtime Database
@@ -287,28 +323,56 @@
 
     // Función para recuperar datos de Firebase Realtime Database
     function recuperarDatos(pregunta) {
-      const reference = ref(database, 'recordatorios/');  // Vamos a buscar en todas las preguntas almacenadas
-      const normalizedPregunta = normalizeText(pregunta); // Convertir la pregunta del usuario a minúsculas y eliminar acentos
+      const reference = ref(database, 'recordatorios/');  
+      const preguntaExpandid = expandirConsulta(pregunta);
+      const normalizedPregunta = normalizeText(preguntaExpandid); // Convertir la pregunta del usuario a minúsculas
 
       get(reference)
         .then((snapshot) => {
           let found = false;
           if (snapshot.exists()) {
             const data = snapshot.val();
-            for (let key in data) {
-              // Compara la pregunta almacenada con la pregunta del usuario, ambas normalizadas
-              if (normalizeText(key) === normalizedPregunta) {
-                document.getElementById("respuesta").textContent = "Respuesta: " + data[key].respuesta;
-                hablarRespuesta(data[key].respuesta);  // Hacer que CHAPIE hable la respuesta
-                found = true;
-                break;  // Salir del ciclo si se encuentra la respuesta
+
+            // Crear un array de objetos con las preguntas y respuestas almacenadas
+            const preguntas = Object.keys(data).map(key => {
+              return { pregunta: key, respuesta: data[key].respuesta };
+            });
+
+            // Configurar Fuse.js para la búsqueda difusa
+            const options = {
+              includeScore: true,
+              threshold: 0.4,  
+              keys: ['pregunta']
+            };
+
+            // Inicializar Fuse.js con las preguntas
+            const fuse = new Fuse(preguntas, options);
+
+            // Realizar la búsqueda difusa
+            const results = fuse.search(normalizedPregunta);
+
+            if (results.length > 0) {
+              const bestMatch = results[0].item;
+              // Si la pregunta es sobre la hora, respondemos con la hora actual
+              if (bestMatch.pregunta.includes("hora")) {
+                const hora = obtenerHoraActual();
+                document.getElementById("respuesta").textContent = hora;
+                hablarRespuesta(hora);  // Hacer que CHAPIE hable la hora
+              } else if (bestMatch.pregunta.includes("fecha")) {
+                const fecha = obtenerFechaActual();
+                document.getElementById("respuesta").textContent = fecha;
+                hablarRespuesta(fecha);  // Hacer que CHAPIE hable la fecha
+              } else {
+                document.getElementById("respuesta").textContent = "Respuesta: " + bestMatch.respuesta;
+                hablarRespuesta(bestMatch.respuesta);  // Hacer que CHAPIE hable la respuesta
               }
+              found = true;
             }
           }
 
           if (!found) {
-            document.getElementById("respuesta").textContent = "No se encontró la pregunta.";
-            hablarRespuesta("Lo siento, no tengo una respuesta para eso.");  // Respuesta en voz si no se encuentra
+            document.getElementById("respuesta").textContent = "No se encontró una pregunta similar.";
+            hablarRespuesta("Lo siento, no tengo una respuesta para eso.");
           }
         })
         .catch((error) => {
@@ -326,11 +390,8 @@
 
     // Función para mostrar los formularios correspondientes
     function mostrarFormulario(formularioId) {
-      // Ocultar todos los formularios primero
       document.getElementById("modalAgregar").style.display = "none";
       document.getElementById("modalConsultar").style.display = "none";
-
-      // Mostrar el formulario seleccionado
       document.getElementById(formularioId).style.display = "block";
     }
 
@@ -358,14 +419,20 @@
 
     // Evento cuando se detecta la voz
     recognition.onresult = function(event) {
-      const question = event.results[0][0].transcript;  // Tomar la primera respuesta
+      const question = event.results[0][0].transcript;
       document.getElementById("voiceStatus").textContent = `Pregunta escuchada: ${question}`;
       recuperarDatos(question);  // Consultar la pregunta en Firebase
     };
 
     // Función para iniciar el reconocimiento de voz
     document.getElementById("btnVoz").addEventListener("click", function() {
-      recognition.start();
+      // Detener la síntesis de voz actual
+      window.speechSynthesis.cancel();  // Detener cualquier voz en curso
+
+      // Detener el reconocimiento de voz si ya está en progreso
+      recognition.stop();  // Detener cualquier reconocimiento anterior
+
+      recognition.start();  // Iniciar un nuevo ciclo de reconocimiento de voz
       document.getElementById("voiceStatus").textContent = "Escuchando...";
     });
 
