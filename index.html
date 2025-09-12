@@ -7,9 +7,8 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <link rel="icon" href="friends.png" type="image/png">
   <link rel="manifest" href="manifest.json" /> 
-  <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.4.6/dist/fuse.min.js"></script> <!-- Agregamos Fuse.js -->
+  <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.4.6/dist/fuse.min.js"></script>
   <style>
-    /* Estilos generales */
     body {
       font-family: 'Poppins', sans-serif;
       background: linear-gradient(45deg, #5c6bc0, #42a5f5);
@@ -19,7 +18,6 @@
       text-align: center;
       overflow-x: hidden;
     }
-
     h1 {
       font-size: 3.5rem;
       color: white;
@@ -32,206 +30,75 @@
       gap: 15px;
       animation: fadeIn 1s ease-out;
     }
-
-    h1 i {
-      font-size: 3.5rem;
-      color: #ff4081;
-      transition: transform 0.3s ease-in-out;
-    }
-
-    h1:hover i {
-      transform: rotate(360deg);
-    }
-
-    /* Contenedor principal */
-    .container {
-      padding: 30px;
-      width: 90%;
-      max-width: 480px;
-      margin: 0 auto;
-      animation: slideIn 1.2s ease-out;
-    }
-
-    /* Estilo para los botones */
+    h1 i { font-size: 3.5rem; color: #ff4081; transition: transform 0.3s ease-in-out; }
+    h1:hover i { transform: rotate(360deg); }
+    .container { padding: 30px; width: 90%; max-width: 480px; margin: 0 auto; animation: slideIn 1.2s ease-out; }
     button {
-      background-color: #ff4081;
-      color: white;
-      padding: 15px;
-      margin: 20px 0;
-      border: none;
-      border-radius: 12px;
-      font-size: 1.4rem;
-      cursor: pointer;
-      width: 100%;
-      box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
-      transition: all 0.3s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      background-color: #ff4081; color: white; padding: 15px; margin: 20px 0;
+      border: none; border-radius: 12px; font-size: 1.4rem; cursor: pointer; width: 100%;
+      box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15); transition: all 0.3s ease;
+      display: flex; align-items: center; justify-content: center;
     }
-
-    button:hover {
-      background-color: #d81b60;
-      transform: translateY(-4px);
-      box-shadow: 0 12px 25px rgba(0, 0, 0, 0.25);
+    button:hover { background-color: #d81b60; transform: translateY(-4px); box-shadow: 0 12px 25px rgba(0, 0, 0, 0.25); }
+    button:active { transform: translateY(0); }
+    button i { margin-right: 12px; }
+    input, textarea {
+      padding: 14px; margin: 12px 0; width: 80%; font-size: 1.1rem;
+      border: none; border-radius: 10px; background-color: #fff; color: #333;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); transition: all 0.3s ease;
     }
-
-    button:active {
-      transform: translateY(0);
-    }
-
-    button i {
-      margin-right: 12px;
-    }
-
-    /* Estilo de los inputs */
-    input {
-      padding: 14px;
-      margin: 12px 0;
-      width: 80%;
-      font-size: 1.1rem;
-      border: none;
-      border-radius: 10px;
-      background-color: #fff;
-      color: #333;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-      transition: all 0.3s ease;
-    }
-
-    input:focus {
-      border: 2px solid #ff4081;
-      outline: none;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    }
-
-    /* Contenedor de los formularios emergentes (modales) */
+    input:focus, textarea:focus { border: 2px solid #ff4081; outline: none; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); }
     .modal {
-      display: none;
-      position: fixed;
-      z-index: 1;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0, 0, 0, 0.6); /* Fondo oscuro */
-      overflow: auto;
-      padding-top: 60px;
-      transition: opacity 0.3s ease;
+      display: none; position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%;
+      background-color: rgba(0, 0, 0, 0.6); overflow: auto; padding-top: 60px; transition: opacity 0.3s ease;
       animation: fadeInModal 0.5s ease-out;
     }
-
-    /* Animación de aparición del modal */
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-
-    @keyframes fadeInModal {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-
-    /* Modal content */
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes fadeInModal { from { opacity: 0; } to { opacity: 1; } }
     .modal-content {
-      background-color: #fff;
-      margin: 5% auto;
-      padding: 25px;
-      border-radius: 20px;
-      width: 80%;
-      max-width: 500px;
-      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-      animation: zoomIn 0.5s ease-out;
+      background-color: #fff; margin: 5% auto; padding: 25px; border-radius: 20px;
+      width: 80%; max-width: 500px; box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1); animation: zoomIn 0.5s ease-out;
     }
-
-    /* Estilos para el cierre del modal */
-    .close {
-      color: #aaa;
-      font-size: 32px;
-      font-weight: bold;
-      float: right;
-      cursor: pointer;
-    }
-
-    .close:hover,
-    .close:focus {
-      color: #000;
-    }
-
-    /* Estilo de la animación del botón y el modal */
-    @keyframes slideIn {
-      from {
-        transform: translateY(-50px);
-        opacity: 0;
-      }
-      to {
-        transform: translateY(0);
-        opacity: 1;
-      }
-    }
-
-    @keyframes zoomIn {
-      from {
-        transform: scale(0.7);
-        opacity: 0;
-      }
-      to {
-        transform: scale(1);
-        opacity: 1;
-      }
-    }
-
-    /* Responsive Design */
-    @media (max-width: 768px) {
-      h1 {
-        font-size: 2.5rem;
-      }
-      button {
-        font-size: 1.2rem;
-      }
-      .modal-content {
-        width: 90%;
-      }
-      input {
-        font-size: 1.1rem;
-      }
-    }
+    .close { color: #aaa; font-size: 32px; font-weight: bold; float: right; cursor: pointer; }
+    .close:hover { color: #000; }
+    @keyframes slideIn { from { transform: translateY(-50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes zoomIn { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
   </style>
 </head>
 <body>
   <div class="container">
     <h1><i class="fas fa-robot"></i> ¡Hola! Soy CHAPI</h1>
-
-    <!-- Botones para agregar o consultar -->
     <button id="btnAgregar"><i class="fas fa-plus-circle"></i> Agregar pregunta</button>
     <button id="btnConsultar"><i class="fas fa-search"></i> Consultar pregunta</button>
-    <button id="btnVoz"><i class="fas fa-microphone"></i> Hablar pregunta</button> <!-- Botón para activar voz -->
+    <button id="btnVoz"><i class="fas fa-microphone"></i> Hablar pregunta</button>
     <p>Agrega tus preguntas y CHAPI las recordará para ti.</p>
 
-    <!-- Modal de "Agregar pregunta" -->
+    <!-- Modal de Agregar -->
     <div id="modalAgregar" class="modal">
       <div class="modal-content">
         <span class="close" id="closeAgregar">&times;</span>
         <h2>Agregar una nueva pregunta</h2>
-        <input type="text" id="inputPregunta" placeholder="Escribe la pregunta" required>
-        <input type="text" id="inputRespuesta" placeholder="Escribe la respuesta" required>
+        <input type="text" id="inputPregunta" placeholder="Escribe la pregunta">
+        <input type="text" id="inputRespuesta" placeholder="Escribe la respuesta">
+        <textarea id="inputLote" rows="6" placeholder="Pega varias preguntas y respuestas aquí&#10;Formato: Pregunta|Respuesta"></textarea>
         <button id="guardarBtn">Guardar pregunta</button>
+        <button id="guardarLoteBtn">Guardar varias</button>
         <button onclick="ocultarFormulario('modalAgregar')">Cancelar</button>
       </div>
     </div>
 
-    <!-- Modal de "Consultar pregunta" -->
+    <!-- Modal de Consultar -->
     <div id="modalConsultar" class="modal">
       <div class="modal-content">
         <span class="close" id="closeConsultar">&times;</span>
         <h2>Consultar una pregunta</h2>
         <input type="text" id="consultaPregunta" placeholder="Consulta tu pregunta">
-        <button id="consultarBtn">Consultar pregunta</button>
+        <button id="consultarBtn">Consultar</button>
         <p id="respuesta"></p>
         <button onclick="ocultarFormulario('modalConsultar')">Cancelar</button>
       </div>
     </div>
 
-    <!-- Elemento para mostrar el estado del reconocimiento de voz -->
     <p id="voiceStatus"></p>
   </div>
 
@@ -239,11 +106,9 @@
   <script type="module" src="https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js"></script>
 
   <script type="module">
-    // Importar las funciones necesarias de Firebase
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
     import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js";
 
-    // Configuración de Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyD8Qixd8Q5DFYu0a5l5jiYC2ODrUbnjwuk",
       authDomain: "guardar-fotos-ec316.firebaseapp.com",
@@ -255,203 +120,118 @@
       measurementId: "G-SMEHYGBPRR"
     };
 
-    // Inicializar Firebase
     const app = initializeApp(firebaseConfig);
-    const database = getDatabase(app);  // Inicializamos la base de datos
+    const database = getDatabase(app);
 
-    // Diccionario de sinónimos
     const sinonimos = {
-      "hora": ["hora", "qué hora es", "me puedes decir la hora", "dime la hora", "qué hora tienes"],
-      "fecha": ["fecha", "qué fecha es", "cuál es la fecha de hoy", "dime la fecha", "qué día es hoy"]
+      "hora": ["hora","qué hora es","dime la hora"],
+      "fecha": ["fecha","qué fecha es","qué día es hoy"]
     };
 
-    // Función para normalizar texto (eliminar espacios, comas, puntos y convertir a minúsculas)
     function normalizeText(text) {
-      return text
-        .normalize("NFD")  // Normaliza caracteres especiales
-        .replace(/[\u0300-\u036f]/g, "")  // Elimina los acentos
-        .replace(/[^\w\s]/g, "")  // Elimina caracteres especiales (comas, puntos, etc.)
-        .replace(/\s+/g, "")  // Elimina los espacios en blanco
-        .toLowerCase();  // Convierte a minúsculas
+      return text.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^\w\s]/g,"").replace(/\s+/g,"").toLowerCase();
     }
 
-    // Función para expandir la consulta con sinónimos
     function expandirConsulta(pregunta) {
       for (const key in sinonimos) {
-        sinonimos[key].forEach(sinonimo => {
-          if (pregunta.toLowerCase().includes(sinonimo)) {
-            return key;  // Devolver la categoría de la pregunta (hora, fecha, etc.)
-          }
-        });
+        if (sinonimos[key].some(s => pregunta.toLowerCase().includes(s))) return key;
       }
-      return pregunta;  // Si no encuentra sinónimos, retorna la pregunta tal cual
+      return pregunta;
     }
 
-    // Función para obtener la hora actual en formato de 12 horas con AM/PM
     function obtenerHoraActual() {
       const ahora = new Date();
       let horas = ahora.getHours();
-      const minutos = ahora.getMinutes().toString().padStart(2, '0');
-      const segundos = ahora.getSeconds().toString().padStart(2, '0');
+      const minutos = ahora.getMinutes().toString().padStart(2,'0');
+      const segundos = ahora.getSeconds().toString().padStart(2,'0');
       const ampm = horas >= 12 ? 'PM' : 'AM';
-      horas = horas % 12; // Convertir a formato de 12 horas
-      horas = horas ? horas : 12; // El valor 0 debería ser 12
+      horas = horas % 12 || 12;
       return `La hora actual es: ${horas}:${minutos}:${segundos} ${ampm}`;
     }
 
-    // Función para obtener la fecha actual en formato completo
     function obtenerFechaActual() {
       const ahora = new Date();
-      const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-      return `Hoy es: ${ahora.toLocaleDateString('es-ES', opciones)}`;
+      return `Hoy es: ${ahora.toLocaleDateString('es-ES',{ weekday:'long',year:'numeric',month:'long',day:'numeric'})}`;
     }
 
-    // Función para guardar datos en Firebase Realtime Database
-    function guardarDatos(pregunta, respuesta) {
-      const reference = ref(database, 'recordatorios/' + normalizeText(pregunta));  // Usamos la pregunta normalizada como ID
-      set(reference, {
-        respuesta: respuesta,
-      })
-      .then(() => {
-        alert("Datos guardados correctamente.");
-        ocultarFormulario("modalAgregar");  // Ocultamos el formulario de agregar después de guardar
-      })
-      .catch((error) => {
-        console.error("Error al guardar los datos:", error);
+    function guardarDatos(pregunta,respuesta) {
+      const reference = ref(database,'recordatorios/'+normalizeText(pregunta));
+      set(reference,{respuesta}).then(()=>{alert("Guardado.");ocultarFormulario("modalAgregar");});
+    }
+
+    function recuperarDatos(pregunta) {
+      const reference = ref(database,'recordatorios/');
+      const preguntaExp = expandirConsulta(pregunta);
+      const normalized = normalizeText(preguntaExp);
+
+      get(reference).then(snapshot=>{
+        let found=false;
+        if(snapshot.exists()){
+          const data=snapshot.val();
+          const preguntas=Object.keys(data).map(key=>({pregunta:key,respuesta:data[key].respuesta}));
+          const fuse=new Fuse(preguntas,{includeScore:true,threshold:0.4,keys:['pregunta']});
+          const results=fuse.search(normalized);
+          if(results.length>0){
+            const best=results[0].item;
+            if(best.pregunta.includes("hora")){ const h=obtenerHoraActual(); document.getElementById("respuesta").textContent=h; hablarRespuesta(h);}
+            else if(best.pregunta.includes("fecha")){ const f=obtenerFechaActual(); document.getElementById("respuesta").textContent=f; hablarRespuesta(f);}
+            else {document.getElementById("respuesta").textContent="Respuesta: "+best.respuesta; hablarRespuesta(best.respuesta);}
+            found=true;
+          }
+        }
+        if(!found){document.getElementById("respuesta").textContent="No se encontró."; hablarRespuesta("Lo siento, no tengo una respuesta.");}
       });
     }
 
-    // Función para recuperar datos de Firebase Realtime Database
-    function recuperarDatos(pregunta) {
-      const reference = ref(database, 'recordatorios/');  
-      const preguntaExpandid = expandirConsulta(pregunta);
-      const normalizedPregunta = normalizeText(preguntaExpandid); // Convertir la pregunta del usuario a minúsculas
+    document.getElementById("btnAgregar").addEventListener("click",()=>mostrarFormulario("modalAgregar"));
+    document.getElementById("btnConsultar").addEventListener("click",()=>mostrarFormulario("modalConsultar"));
+    function mostrarFormulario(id){document.getElementById("modalAgregar").style.display="none";document.getElementById("modalConsultar").style.display="none";document.getElementById(id).style.display="block";}
+    function ocultarFormulario(id){document.getElementById(id).style.display="none";}
 
-      get(reference)
-        .then((snapshot) => {
-          let found = false;
-          if (snapshot.exists()) {
-            const data = snapshot.val();
-
-            // Crear un array de objetos con las preguntas y respuestas almacenadas
-            const preguntas = Object.keys(data).map(key => {
-              return { pregunta: key, respuesta: data[key].respuesta };
-            });
-
-            // Configurar Fuse.js para la búsqueda difusa
-            const options = {
-              includeScore: true,
-              threshold: 0.4,  
-              keys: ['pregunta']
-            };
-
-            // Inicializar Fuse.js con las preguntas
-            const fuse = new Fuse(preguntas, options);
-
-            // Realizar la búsqueda difusa
-            const results = fuse.search(normalizedPregunta);
-
-            if (results.length > 0) {
-              const bestMatch = results[0].item;
-              // Si la pregunta es sobre la hora, respondemos con la hora actual
-              if (bestMatch.pregunta.includes("hora")) {
-                const hora = obtenerHoraActual();
-                document.getElementById("respuesta").textContent = hora;
-                hablarRespuesta(hora);  // Hacer que CHAPIE hable la hora
-              } else if (bestMatch.pregunta.includes("fecha")) {
-                const fecha = obtenerFechaActual();
-                document.getElementById("respuesta").textContent = fecha;
-                hablarRespuesta(fecha);  // Hacer que CHAPIE hable la fecha
-              } else {
-                document.getElementById("respuesta").textContent = "Respuesta: " + bestMatch.respuesta;
-                hablarRespuesta(bestMatch.respuesta);  // Hacer que CHAPIE hable la respuesta
-              }
-              found = true;
-            }
-          }
-
-          if (!found) {
-            document.getElementById("respuesta").textContent = "No se encontró una pregunta similar.";
-            hablarRespuesta("Lo siento, no tengo una respuesta para eso.");
-          }
-        })
-        .catch((error) => {
-          console.error("Error al recuperar los datos:", error);
-        });
-    }
-
-    // Mostrar formularios al hacer clic en los botones
-    document.getElementById("btnAgregar").addEventListener("click", function() {
-      mostrarFormulario("modalAgregar");
-    });
-    document.getElementById("btnConsultar").addEventListener("click", function() {
-      mostrarFormulario("modalConsultar");
+    document.getElementById("guardarBtn").addEventListener("click",()=>{
+      const p=document.getElementById("inputPregunta").value;
+      const r=document.getElementById("inputRespuesta").value;
+      guardarDatos(p,r);
     });
 
-    // Función para mostrar los formularios correspondientes
-    function mostrarFormulario(formularioId) {
-      document.getElementById("modalAgregar").style.display = "none";
-      document.getElementById("modalConsultar").style.display = "none";
-      document.getElementById(formularioId).style.display = "block";
-    }
-
-    // Función para ocultar formularios
-    function ocultarFormulario(formularioId) {
-      document.getElementById(formularioId).style.display = "none";
-    }
-
-    // Agregar evento al botón de guardar para invocar guardarDatos
-    document.getElementById("guardarBtn").addEventListener("click", function() {
-      const pregunta = document.getElementById("inputPregunta").value;
-      const respuesta = document.getElementById("inputRespuesta").value;
-      guardarDatos(pregunta, respuesta);
-    });
-
-    // Agregar evento al botón de consultar para invocar recuperarDatos
-    document.getElementById("consultarBtn").addEventListener("click", function() {
-      const pregunta = document.getElementById("consultaPregunta").value;
-      recuperarDatos(pregunta);
-    });
-
-    // Configuración del reconocimiento de voz (SpeechRecognition API)
-    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-    recognition.lang = "es-ES";  // Establecer el idioma a español
-
-    // Evento cuando se detecta la voz
-    recognition.onresult = function(event) {
-      const question = event.results[0][0].transcript;
-      document.getElementById("voiceStatus").textContent = `Pregunta escuchada: ${question}`;
-      recuperarDatos(question);  // Consultar la pregunta en Firebase
-    };
-
-    // Función para iniciar el reconocimiento de voz
-    document.getElementById("btnVoz").addEventListener("click", function() {
-      // Detener la síntesis de voz actual
-      window.speechSynthesis.cancel();  // Detener cualquier voz en curso
-
-      // Detener el reconocimiento de voz si ya está en progreso
-      recognition.stop();  // Detener cualquier reconocimiento anterior
-
-      recognition.start();  // Iniciar un nuevo ciclo de reconocimiento de voz
-      document.getElementById("voiceStatus").textContent = "Escuchando...";
-    });
-
-    // Función para que CHAPIE hable la respuesta
-    function hablarRespuesta(respuesta) {
-      const speech = new SpeechSynthesisUtterance(respuesta);  // Crear un objeto de voz
-      speech.lang = "es-ES";  // Establecer el idioma a español
-      window.speechSynthesis.speak(speech);  // Hacer hablar a CHAPIE
-    }
-
-    // Función para cerrar el modal de agregar pregunta
-    document.getElementById("closeAgregar").addEventListener("click", function() {
+    // Guardar varias
+    document.getElementById("guardarLoteBtn").addEventListener("click",()=>{
+      const texto=document.getElementById("inputLote").value.trim();
+      if(!texto){alert("Pega tus preguntas y respuestas.");return;}
+      texto.split("\n").forEach(linea=>{
+        const partes=linea.split("|");
+        if(partes.length===2){guardarDatos(partes[0].trim(),partes[1].trim());}
+      });
+      alert("Preguntas guardadas.");
+      document.getElementById("inputLote").value="";
       ocultarFormulario("modalAgregar");
     });
 
-    // Función para cerrar el modal de consultar pregunta
-    document.getElementById("closeConsultar").addEventListener("click", function() {
-      ocultarFormulario("modalConsultar");
+    document.getElementById("consultarBtn").addEventListener("click",()=>{
+      const p=document.getElementById("consultaPregunta").value;
+      recuperarDatos(p);
     });
+
+    const recognition=new(window.SpeechRecognition||window.webkitSpeechRecognition)();
+    recognition.lang="es-ES";
+    recognition.onresult=function(event){
+      const q=event.results[0][0].transcript;
+      document.getElementById("voiceStatus").textContent=`Pregunta escuchada: ${q}`;
+      recuperarDatos(q);
+    };
+    document.getElementById("btnVoz").addEventListener("click",()=>{
+      window.speechSynthesis.cancel(); recognition.stop(); recognition.start();
+      document.getElementById("voiceStatus").textContent="Escuchando...";
+    });
+
+    function hablarRespuesta(respuesta){
+      const speech=new SpeechSynthesisUtterance(respuesta);
+      speech.lang="es-ES";
+      window.speechSynthesis.speak(speech);
+    }
+
+    document.getElementById("closeAgregar").addEventListener("click",()=>ocultarFormulario("modalAgregar"));
+    document.getElementById("closeConsultar").addEventListener("click",()=>ocultarFormulario("modalConsultar"));
   </script>
 </body>
 </html>
