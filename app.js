@@ -16,7 +16,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 
-// --- Normalizador ---
+// --- Normalizador (mantiene + - * /) ---
 function normalizeText(text) {
   return String(text || "")
     .toLowerCase()
@@ -29,59 +29,88 @@ function normalizeText(text) {
 
 let cachePreguntas = [];
 let fuse = null;
-const fuseOptions = { includeScore: true, threshold: 0.35, keys: ['pregunta_norm'], ignoreLocation: true };
+const fuseOptions = { 
+  includeScore: true, 
+  threshold: 0.35, 
+  keys: ["pregunta_norm"], 
+  ignoreLocation: true 
+};
 
+// --- Construir cache ---
 function buildCache(snapshotVal) {
   const lista = [];
   if (snapshotVal) {
     Object.entries(snapshotVal).forEach(([key, val]) => {
       const pregunta = val.pregunta || key;
       const respuesta = val.respuesta || "";
-      lista.push({ id: key, pregunta, respuesta, pregunta_norm: normalizeText(pregunta) });
+      lista.push({ 
+        id: key, 
+        pregunta, 
+        respuesta, 
+        pregunta_norm: normalizeText(pregunta) 
+      });
     });
   }
   cachePreguntas = lista;
   fuse = new Fuse(cachePreguntas, fuseOptions);
 }
 
-const recordatoriosRef = ref(database, 'recordatorios/');
+// Cargar base inicial
+const recordatoriosRef = ref(database, "recordatorios/");
 onValue(recordatoriosRef, (snapshot) => buildCache(snapshot.val()));
 
+// --- Guardar datos ---
 function guardarDatos(p, r) {
   const refPush = push(recordatoriosRef);
-  set(refPush, { pregunta: p, respuesta: r, pregunta_norm: normalizeText(p) });
-}
-
-function obtenerHoraActual() {
-  return "La hora actual es " + new Date().toLocaleTimeString("es-ES", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true
+  set(refPush, { 
+    pregunta: p, 
+    respuesta: r, 
+    pregunta_norm: normalizeText(p) 
   });
 }
 
-function obtenerFechaActual() {
-  return "Hoy es: " + new Date().toLocaleDateString("es-ES", { weekday:"long", year:"numeric", month:"long", day:"numeric" });
+// --- Hora y fecha en tiempo real ---
+function obtenerHoraActual() {
+  const ahora = new Date();
+  let horas = ahora.getHours();
+  let minutos = ahora.getMinutes().toString().padStart(2, "0");
+  let ampm = horas >= 12 ? "PM" : "AM";
+  horas = horas % 12 || 12;
+  return `La hora actual es ${horas}:${minutos} ${ampm}`;
 }
 
+function obtenerFechaActual() {
+  return "Hoy es: " + new Date().toLocaleDateString("es-ES", { 
+    weekday: "long", 
+    year: "numeric", 
+    month: "long", 
+    day: "numeric" 
+  });
+}
+
+// --- Buscar pregunta ---
 function buscarPregunta(query) {
   const qnorm = normalizeText(query);
   if (!qnorm) return null;
 
+  // Hora y fecha en tiempo real
   if (qnorm.includes("hora")) return { respuesta: obtenerHoraActual() };
   if (qnorm.includes("fecha")) return { respuesta: obtenerFechaActual() };
 
+  // Exacta
   const exact = cachePreguntas.find(p => p.pregunta_norm === qnorm);
   if (exact) return exact;
 
+  // Substring
   const substr = cachePreguntas.find(p => p.pregunta_norm.includes(qnorm));
   if (substr) return substr;
 
+  // Fuzzy
   const res = fuse.search(qnorm, { limit: 1 });
   return res.length ? res[0].item : null;
 }
 
+// --- Recuperar datos ---
 let lastQuestion = "";
 
 function recuperarDatos(q) {
@@ -97,6 +126,7 @@ function recuperarDatos(q) {
   }
 }
 
+// --- Mostrar chat ---
 function mostrarChat(pregunta, respuesta) {
   const chatBox = document.getElementById("chatBox");
   chatBox.innerHTML += `
@@ -136,7 +166,7 @@ function hablar(texto) {
   window.speechSynthesis.speak(sp);
 }
 
-// --- Botones UI ---
+// --- UI ---
 document.getElementById("btnAgregar").onclick = () => mostrar("modalAgregar");
 document.getElementById("closeAgregar").onclick = () => ocultar("modalAgregar");
 document.getElementById("closeChat").onclick = () => ocultar("chatModal");
@@ -148,10 +178,10 @@ document.getElementById("guardarBtn").onclick = () => {
   const p = document.getElementById("inputPregunta").value.trim();
   const r = document.getElementById("inputRespuesta").value.trim();
   if (p && r) {
-    guardarDatos(p,r);
+    guardarDatos(p, r);
     alert("¡Pregunta registrada con éxito!");
-    document.getElementById("inputPregunta").value="";
-    document.getElementById("inputRespuesta").value="";
+    document.getElementById("inputPregunta").value = "";
+    document.getElementById("inputRespuesta").value = "";
     ocultar("modalAgregar");
   }
 };
@@ -162,26 +192,29 @@ document.getElementById("guardarLoteBtn").onclick = () => {
   if (!t) return;
   let count = 0;
   t.split("\n").forEach(l => {
-    const [p,...rr] = l.split("|");
-    if (p && rr.length) { guardarDatos(p.trim(), rr.join("|").trim()); count++; }
+    const [p, ...rr] = l.split("|");
+    if (p && rr.length) { 
+      guardarDatos(p.trim(), rr.join("|").trim()); 
+      count++; 
+    }
   });
   if (count > 0) {
     alert("¡Preguntas registradas con éxito!");
-    document.getElementById("inputLote").value="";
+    document.getElementById("inputLote").value = "";
     ocultar("modalAgregar");
   }
 };
 
-// Consultar manualmente
+// Consultar manual
 document.getElementById("consultarBtn").onclick = () => {
   const q = document.getElementById("consultaPregunta").value.trim();
-  if(q){
+  if (q) {
     recuperarDatos(q);
     ocultar("modalConsultar");
   }
 };
 
-// Guardar respuesta enseñada
+// Guardar enseñanza
 document.getElementById("teachBtn").onclick = () => {
   const nuevaRespuesta = document.getElementById("teachInput").value.trim();
   if (lastQuestion && nuevaRespuesta) {
@@ -193,12 +226,12 @@ document.getElementById("teachBtn").onclick = () => {
   }
 };
 
-// Cerrar modal si se hace clic fuera
+// Cerrar modal clic fuera
 window.onclick = function(event) {
   if (event.target.classList.contains("modal")) {
     ocultar(event.target.id);
   }
 };
 
-function mostrar(id){ document.getElementById(id).style.display="block"; }
-function ocultar(id){ document.getElementById(id).style.display="none"; }
+function mostrar(id){ document.getElementById(id).style.display = "block"; }
+function ocultar(id){ document.getElementById(id).style.display = "none"; }
