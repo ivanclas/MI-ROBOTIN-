@@ -89,6 +89,16 @@
       </div>
     </div>
 
+    <!-- Modal Consultar -->
+    <div id="modalConsultar" class="modal">
+      <div class="modal-content">
+        <span class="close" id="closeConsultar">&times;</span>
+        <h2>Consultar una pregunta</h2>
+        <input type="text" id="consultaPregunta" placeholder="Escribe tu pregunta">
+        <button id="consultarBtn">Consultar</button>
+      </div>
+    </div>
+
     <!-- Modal Chat emergente -->
     <div id="chatModal" class="modal">
       <div class="modal-content">
@@ -124,12 +134,13 @@
     const app = initializeApp(firebaseConfig);
     const database = getDatabase(app);
 
+    // --- Normalizador corregido (mantiene + - * /) ---
     function normalizeText(text) {
       return String(text || "")
         .toLowerCase()
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^\w\s]/g, "")
+        .replace(/[^a-z0-9+\-*/\s]/g, "") // 🔥 mantiene operadores
         .replace(/\s+/g, " ")
         .trim();
     }
@@ -240,6 +251,8 @@
     document.getElementById("btnAgregar").onclick = () => mostrar("modalAgregar");
     document.getElementById("closeAgregar").onclick = () => ocultar("modalAgregar");
     document.getElementById("closeChat").onclick = () => ocultar("chatModal");
+    document.getElementById("btnConsultar").onclick = () => mostrar("modalConsultar");
+    document.getElementById("closeConsultar").onclick = () => ocultar("modalConsultar");
 
     // Guardar una
     document.getElementById("guardarBtn").onclick = () => {
@@ -267,6 +280,15 @@
         alert("¡Preguntas registradas con éxito!");
         document.getElementById("inputLote").value="";
         ocultar("modalAgregar");
+      }
+    };
+
+    // Consultar manualmente
+    document.getElementById("consultarBtn").onclick = () => {
+      const q = document.getElementById("consultaPregunta").value.trim();
+      if(q){
+        recuperarDatos(q);
+        ocultar("modalConsultar");
       }
     };
 
