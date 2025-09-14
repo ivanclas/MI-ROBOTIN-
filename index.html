@@ -1,113 +1,114 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>CHAPI</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <link rel="icon" href="friends.png" type="image/png">
-  <link rel="manifest" href="manifest.json" /> 
-  <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.4.6/dist/fuse.min.js"></script>
+  <link rel="manifest" href="manifest.json" />
+  <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
+
   <style>
-    body {
-      font-family: 'Poppins', sans-serif;
-      background: linear-gradient(45deg, #5c6bc0, #42a5f5);
-      margin: 0;
-      padding: 0;
+    body { font-family: 'Poppins', sans-serif; background: linear-gradient(45deg,#5c6bc0,#42a5f5); margin:0; padding:0; color:#fff; text-align:center; overflow-x:hidden; }
+    h1{ font-size:3.5rem; color:#fff; font-weight:700; margin-top:50px; text-shadow:3px 3px 6px rgba(0,0,0,0.2); display:flex; justify-content:center; align-items:center; gap:15px; animation:fadeIn 1s ease-out; }
+    h1 i{ font-size:3.5rem; color:#ff4081; transition:transform .3s; } h1:hover i{ transform:rotate(360deg); }
+    .container{ padding:30px; width:90%; max-width:480px; margin:0 auto; animation:slideIn 1.2s ease-out;}
+    button{ background:#ff4081; color:#fff; padding:15px; margin:20px 0; border:none; border-radius:12px; font-size:1.4rem; cursor:pointer; width:100%; box-shadow:0 8px 15px rgba(0,0,0,0.15); transition:all .3s; display:flex; align-items:center; justify-content:center;}
+    button:hover{ background:#d81b60; transform:translateY(-4px); box-shadow:0 12px 25px rgba(0,0,0,0.25);}
+    input, textarea{ padding:14px; margin:12px 0; width:80%; font-size:1.1rem; border:none; border-radius:10px; background:#fff; color:#333; box-shadow:0 4px 10px rgba(0,0,0,0.1); transition:all .3s; }
+    input:focus, textarea:focus{ border:2px solid #ff4081; outline:none; box-shadow:0 4px 15px rgba(0,0,0,0.2); }
+    .modal{ display:none; position:fixed; z-index:100; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6); overflow:auto; padding-top:60px; animation:fadeInModal .5s;}
+    .modal-content{ background:#fff; margin:5% auto; padding:25px; border-radius:20px; width:80%; max-width:500px; box-shadow:0 10px 20px rgba(0,0,0,0.1); animation:zoomIn .5s; color:black; position:relative;}
+    .close{ color:#aaa; font-size:32px; font-weight:bold; float:right; cursor:pointer;}
+    .close:hover{ color:#000; }
+
+    /* CHAT emergente */
+    #chatModal .modal-content {
+      background: #fff;
+      border-radius: 15px;
+      padding: 20px;
+      max-width: 400px;
+    }
+    #chatBox {
+      max-height: 400px;
+      overflow-y: auto;
+      text-align: left;
+    }
+    .chat-bubble {
+      padding: 12px 15px;
+      border-radius: 15px;
+      margin: 10px 0;
+      font-size: 1.1rem;
+      color: #333;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+    }
+    .chat-user { background: #e0f7fa; text-align: right; }
+    .chat-bot { background: #ffebee; text-align: left; }
+
+    /* Micrófono flotante dentro del chat */
+    #micBtn {
+      position: absolute;
+      bottom: 15px;
+      right: 15px;
+      background: #ff4081;
       color: white;
-      text-align: center;
-      overflow-x: hidden;
+      border: none;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      font-size: 1.5rem;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      box-shadow:0 5px 15px rgba(0,0,0,0.3);
     }
-    h1 {
-      font-size: 3.5rem;
-      color: white;
-      font-weight: 700;
-      margin-top: 50px;
-      text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.2);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 15px;
-      animation: fadeIn 1s ease-out;
-    }
-    h1 i { font-size: 3.5rem; color: #ff4081; transition: transform 0.3s ease-in-out; }
-    h1:hover i { transform: rotate(360deg); }
-    .container { padding: 30px; width: 90%; max-width: 480px; margin: 0 auto; animation: slideIn 1.2s ease-out; }
-    button {
-      background-color: #ff4081; color: white; padding: 15px; margin: 20px 0;
-      border: none; border-radius: 12px; font-size: 1.4rem; cursor: pointer; width: 100%;
-      box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15); transition: all 0.3s ease;
-      display: flex; align-items: center; justify-content: center;
-    }
-    button:hover { background-color: #d81b60; transform: translateY(-4px); box-shadow: 0 12px 25px rgba(0, 0, 0, 0.25); }
-    button:active { transform: translateY(0); }
-    button i { margin-right: 12px; }
-    input, textarea {
-      padding: 14px; margin: 12px 0; width: 80%; font-size: 1.1rem;
-      border: none; border-radius: 10px; background-color: #fff; color: #333;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); transition: all 0.3s ease;
-    }
-    input:focus, textarea:focus { border: 2px solid #ff4081; outline: none; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); }
-    .modal {
-      display: none; position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%;
-      background-color: rgba(0, 0, 0, 0.6); overflow: auto; padding-top: 60px; transition: opacity 0.3s ease;
-      animation: fadeInModal 0.5s ease-out;
-    }
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes fadeInModal { from { opacity: 0; } to { opacity: 1; } }
-    .modal-content {
-      background-color: #fff; margin: 5% auto; padding: 25px; border-radius: 20px;
-      width: 80%; max-width: 500px; box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1); animation: zoomIn 0.5s ease-out;
-    }
-    .close { color: #aaa; font-size: 32px; font-weight: bold; float: right; cursor: pointer; }
-    .close:hover { color: #000; }
-    @keyframes slideIn { from { transform: translateY(-50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-    @keyframes zoomIn { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    #micBtn:hover { background:#d81b60; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1><i class="fas fa-robot"></i> ¡Hola! Soy CHAPI</h1>
+
     <button id="btnAgregar"><i class="fas fa-plus-circle"></i> Agregar pregunta</button>
     <button id="btnConsultar"><i class="fas fa-search"></i> Consultar pregunta</button>
     <button id="btnVoz"><i class="fas fa-microphone"></i> Hablar pregunta</button>
     <p>Agrega tus preguntas y CHAPI las recordará para ti.</p>
 
-    <!-- Modal de Agregar -->
+    <!-- Modal Agregar -->
     <div id="modalAgregar" class="modal">
       <div class="modal-content">
         <span class="close" id="closeAgregar">&times;</span>
-        <h2>Agregar una nueva pregunta</h2>
-        <input type="text" id="inputPregunta" placeholder="Escribe la pregunta">
+        <h2>Agregar nuevas preguntas</h2>
+        <input type="text" id="inputPregunta" placeholder="Escribe una pregunta">
         <input type="text" id="inputRespuesta" placeholder="Escribe la respuesta">
-        <textarea id="inputLote" rows="6" placeholder="Pega varias preguntas y respuestas aquí&#10;Formato: Pregunta|Respuesta"></textarea>
-        <button id="guardarBtn">Guardar pregunta</button>
+        <textarea id="inputLote" rows="6" placeholder="Pega varias preguntas aquí&#10;Formato: Pregunta|Respuesta"></textarea>
+        <button id="guardarBtn">Guardar una</button>
         <button id="guardarLoteBtn">Guardar varias</button>
-        <button onclick="ocultarFormulario('modalAgregar')">Cancelar</button>
       </div>
     </div>
 
-    <!-- Modal de Consultar -->
-    <div id="modalConsultar" class="modal">
+    <!-- Modal Chat emergente -->
+    <div id="chatModal" class="modal">
       <div class="modal-content">
-        <span class="close" id="closeConsultar">&times;</span>
-        <h2>Consultar una pregunta</h2>
-        <input type="text" id="consultaPregunta" placeholder="Consulta tu pregunta">
-        <button id="consultarBtn">Consultar</button>
-        <p id="respuesta"></p>
-        <button onclick="ocultarFormulario('modalConsultar')">Cancelar</button>
+        <span class="close" id="closeChat">&times;</span>
+        <div id="chatBox"></div>
+        <div id="teachBox" style="display:none; margin-top:15px;">
+          <input type="text" id="teachInput" placeholder="Escribe la respuesta aquí">
+          <button id="teachBtn">Guardar respuesta</button>
+        </div>
+        <button id="micBtn"><i class="fas fa-microphone"></i></button>
       </div>
     </div>
 
     <p id="voiceStatus"></p>
   </div>
 
-  <script type="module" src="https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js"></script>
-  <script type="module" src="https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js"></script>
-
+  <!-- Firebase -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
-    import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js";
+    import { getDatabase, ref, set, push, onValue } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyD8Qixd8Q5DFYu0a5l5jiYC2ODrUbnjwuk",
@@ -123,115 +124,173 @@
     const app = initializeApp(firebaseConfig);
     const database = getDatabase(app);
 
-    const sinonimos = {
-      "hora": ["hora","qué hora es","dime la hora"],
-      "fecha": ["fecha","qué fecha es","qué día es hoy"]
-    };
-
     function normalizeText(text) {
-      return text.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^\w\s]/g,"").replace(/\s+/g,"").toLowerCase();
+      return String(text || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^\w\s]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
     }
 
-    function expandirConsulta(pregunta) {
-      for (const key in sinonimos) {
-        if (sinonimos[key].some(s => pregunta.toLowerCase().includes(s))) return key;
+    let cachePreguntas = [];
+    let fuse = null;
+    const fuseOptions = { includeScore: true, threshold: 0.45, keys: ['pregunta_norm', 'respuesta_norm'], ignoreLocation: true, minMatchCharLength: 2 };
+
+    function buildCache(snapshotVal) {
+      const lista = [];
+      if (snapshotVal) {
+        Object.entries(snapshotVal).forEach(([key, val]) => {
+          const pregunta = val.pregunta || key;
+          const respuesta = val.respuesta || "";
+          lista.push({ id: key, pregunta, respuesta, pregunta_norm: normalizeText(pregunta), respuesta_norm: normalizeText(respuesta) });
+        });
       }
-      return pregunta;
+      cachePreguntas = lista;
+      fuse = new Fuse(cachePreguntas, fuseOptions);
+    }
+
+    const recordatoriosRef = ref(database, 'recordatorios/');
+    onValue(recordatoriosRef, (snapshot) => buildCache(snapshot.val()));
+
+    function guardarDatos(p, r) {
+      const refPush = push(recordatoriosRef);
+      set(refPush, { pregunta: p, respuesta: r, pregunta_norm: normalizeText(p), respuesta_norm: normalizeText(r) });
     }
 
     function obtenerHoraActual() {
       const ahora = new Date();
-      let horas = ahora.getHours();
-      const minutos = ahora.getMinutes().toString().padStart(2,'0');
-      const segundos = ahora.getSeconds().toString().padStart(2,'0');
-      const ampm = horas >= 12 ? 'PM' : 'AM';
-      horas = horas % 12 || 12;
-      return `La hora actual es: ${horas}:${minutos}:${segundos} ${ampm}`;
+      let h = ahora.getHours(), m = ahora.getMinutes().toString().padStart(2,'0'), s = ahora.getSeconds().toString().padStart(2,'0');
+      const ampm = h >= 12 ? "PM" : "AM";
+      h = h % 12 || 12;
+      return `La hora actual es ${h}:${m}:${s} ${ampm}`;
     }
-
     function obtenerFechaActual() {
-      const ahora = new Date();
-      return `Hoy es: ${ahora.toLocaleDateString('es-ES',{ weekday:'long',year:'numeric',month:'long',day:'numeric'})}`;
+      return "Hoy es: " + new Date().toLocaleDateString("es-ES", { weekday:"long", year:"numeric", month:"long", day:"numeric" });
     }
 
-    function guardarDatos(pregunta,respuesta) {
-      const reference = ref(database,'recordatorios/'+normalizeText(pregunta));
-      set(reference,{respuesta}).then(()=>{alert("Guardado.");ocultarFormulario("modalAgregar");});
+    function buscarPregunta(query) {
+      const qnorm = normalizeText(query);
+      if (!qnorm) return null;
+      if (qnorm.includes("hora")) return {respuesta: obtenerHoraActual()};
+      if (qnorm.includes("fecha")) return {respuesta: obtenerFechaActual()};
+      const exact = cachePreguntas.find(p => p.pregunta_norm === qnorm);
+      if (exact) return exact;
+      const substr = cachePreguntas.find(p => p.pregunta_norm.includes(qnorm));
+      if (substr) return substr;
+      const res = fuse.search(qnorm, {limit:1});
+      return res.length ? res[0].item : null;
     }
 
-    function recuperarDatos(pregunta) {
-      const reference = ref(database,'recordatorios/');
-      const preguntaExp = expandirConsulta(pregunta);
-      const normalized = normalizeText(preguntaExp);
+    let lastQuestion = "";
 
-      get(reference).then(snapshot=>{
-        let found=false;
-        if(snapshot.exists()){
-          const data=snapshot.val();
-          const preguntas=Object.keys(data).map(key=>({pregunta:key,respuesta:data[key].respuesta}));
-          const fuse=new Fuse(preguntas,{includeScore:true,threshold:0.4,keys:['pregunta']});
-          const results=fuse.search(normalized);
-          if(results.length>0){
-            const best=results[0].item;
-            if(best.pregunta.includes("hora")){ const h=obtenerHoraActual(); document.getElementById("respuesta").textContent=h; hablarRespuesta(h);}
-            else if(best.pregunta.includes("fecha")){ const f=obtenerFechaActual(); document.getElementById("respuesta").textContent=f; hablarRespuesta(f);}
-            else {document.getElementById("respuesta").textContent="Respuesta: "+best.respuesta; hablarRespuesta(best.respuesta);}
-            found=true;
-          }
-        }
-        if(!found){document.getElementById("respuesta").textContent="No se encontró."; hablarRespuesta("Lo siento, no tengo una respuesta.");}
-      });
+    function recuperarDatos(q) {
+      const best = buscarPregunta(q);
+      if (best) {
+        mostrarChat(q, best.respuesta);
+        hablar(best.respuesta);
+      } else {
+        mostrarChat(q, "No sé esa respuesta. ¿Quieres enseñármela?");
+        document.getElementById("teachBox").style.display = "block";
+        lastQuestion = q;
+        hablar("Lo siento, no encontré respuesta. ¿Quieres enseñármela?");
+      }
     }
 
-    document.getElementById("btnAgregar").addEventListener("click",()=>mostrarFormulario("modalAgregar"));
-    document.getElementById("btnConsultar").addEventListener("click",()=>mostrarFormulario("modalConsultar"));
-    function mostrarFormulario(id){document.getElementById("modalAgregar").style.display="none";document.getElementById("modalConsultar").style.display="none";document.getElementById(id).style.display="block";}
-    function ocultarFormulario(id){document.getElementById(id).style.display="none";}
+    function mostrarChat(pregunta, respuesta) {
+      const chatBox = document.getElementById("chatBox");
+      chatBox.innerHTML += `
+        <div class="chat-bubble chat-user"><b>Tú:</b> ${pregunta}</div>
+        <div class="chat-bubble chat-bot"><b>CHAPI:</b> ${respuesta}</div>
+      `;
+      chatBox.scrollTop = chatBox.scrollHeight;
+      document.getElementById("chatModal").style.display = "block";
+    }
 
-    document.getElementById("guardarBtn").addEventListener("click",()=>{
-      const p=document.getElementById("inputPregunta").value;
-      const r=document.getElementById("inputRespuesta").value;
-      guardarDatos(p,r);
-    });
+    let recognition;
+    if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SR();
+      recognition.lang = "es-ES";
+      recognition.onresult = e => {
+        const q = e.results[0][0].transcript;
+        document.getElementById("voiceStatus").textContent = "Pregunta escuchada: " + q;
+        recuperarDatos(q);
+      };
+    }
+
+    function startVoice(){
+      if (!recognition) return alert("Tu navegador no soporta reconocimiento de voz.");
+      window.speechSynthesis.cancel();
+      recognition.start();
+      document.getElementById("voiceStatus").textContent = "🎙️ Escuchando...";
+    }
+
+    document.getElementById("btnVoz").addEventListener("click", startVoice);
+    document.getElementById("micBtn").addEventListener("click", startVoice);
+
+    function hablar(texto) {
+      const sp = new SpeechSynthesisUtterance(texto);
+      sp.lang = "es-ES";
+      window.speechSynthesis.speak(sp);
+    }
+
+    // Botones UI
+    document.getElementById("btnAgregar").onclick = () => mostrar("modalAgregar");
+    document.getElementById("closeAgregar").onclick = () => ocultar("modalAgregar");
+    document.getElementById("closeChat").onclick = () => ocultar("chatModal");
+
+    // Guardar una
+    document.getElementById("guardarBtn").onclick = () => {
+      const p = document.getElementById("inputPregunta").value.trim();
+      const r = document.getElementById("inputRespuesta").value.trim();
+      if (p && r) {
+        guardarDatos(p,r);
+        alert("¡Pregunta registrada con éxito!");
+        document.getElementById("inputPregunta").value="";
+        document.getElementById("inputRespuesta").value="";
+        ocultar("modalAgregar");
+      }
+    };
 
     // Guardar varias
-    document.getElementById("guardarLoteBtn").addEventListener("click",()=>{
-      const texto=document.getElementById("inputLote").value.trim();
-      if(!texto){alert("Pega tus preguntas y respuestas.");return;}
-      texto.split("\n").forEach(linea=>{
-        const partes=linea.split("|");
-        if(partes.length===2){guardarDatos(partes[0].trim(),partes[1].trim());}
+    document.getElementById("guardarLoteBtn").onclick = () => {
+      const t = document.getElementById("inputLote").value.trim();
+      if (!t) return;
+      let count = 0;
+      t.split("\n").forEach(l => {
+        const [p,...rr] = l.split("|");
+        if (p && rr.length) { guardarDatos(p.trim(), rr.join("|").trim()); count++; }
       });
-      alert("Preguntas guardadas.");
-      document.getElementById("inputLote").value="";
-      ocultarFormulario("modalAgregar");
-    });
-
-    document.getElementById("consultarBtn").addEventListener("click",()=>{
-      const p=document.getElementById("consultaPregunta").value;
-      recuperarDatos(p);
-    });
-
-    const recognition=new(window.SpeechRecognition||window.webkitSpeechRecognition)();
-    recognition.lang="es-ES";
-    recognition.onresult=function(event){
-      const q=event.results[0][0].transcript;
-      document.getElementById("voiceStatus").textContent=`Pregunta escuchada: ${q}`;
-      recuperarDatos(q);
+      if (count > 0) {
+        alert("¡Preguntas registradas con éxito!");
+        document.getElementById("inputLote").value="";
+        ocultar("modalAgregar");
+      }
     };
-    document.getElementById("btnVoz").addEventListener("click",()=>{
-      window.speechSynthesis.cancel(); recognition.stop(); recognition.start();
-      document.getElementById("voiceStatus").textContent="Escuchando...";
-    });
 
-    function hablarRespuesta(respuesta){
-      const speech=new SpeechSynthesisUtterance(respuesta);
-      speech.lang="es-ES";
-      window.speechSynthesis.speak(speech);
-    }
+    // Guardar respuesta enseñada
+    document.getElementById("teachBtn").onclick = () => {
+      const nuevaRespuesta = document.getElementById("teachInput").value.trim();
+      if (lastQuestion && nuevaRespuesta) {
+        guardarDatos(lastQuestion, nuevaRespuesta);
+        mostrarChat("Enseñanza", `He aprendido: "${lastQuestion}" = "${nuevaRespuesta}"`);
+        document.getElementById("teachInput").value = "";
+        document.getElementById("teachBox").style.display = "none";
+        lastQuestion = "";
+      }
+    };
 
-    document.getElementById("closeAgregar").addEventListener("click",()=>ocultarFormulario("modalAgregar"));
-    document.getElementById("closeConsultar").addEventListener("click",()=>ocultarFormulario("modalConsultar"));
+    // Cerrar modal si se hace clic fuera
+    window.onclick = function(event) {
+      if (event.target.classList.contains("modal")) {
+        ocultar(event.target.id);
+      }
+    };
+
+    function mostrar(id){ document.getElementById(id).style.display="block"; }
+    function ocultar(id){ document.getElementById(id).style.display="none"; }
   </script>
 </body>
 </html>
