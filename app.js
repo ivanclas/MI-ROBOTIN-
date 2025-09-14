@@ -88,7 +88,7 @@ function obtenerFechaActual() {
   });
 }
 
-// --- Buscar pregunta ---
+// --- Buscar pregunta con variación aleatoria ---
 function buscarPregunta(query) {
   const qnorm = normalizeText(query);
   if (!qnorm) return null;
@@ -97,17 +97,30 @@ function buscarPregunta(query) {
   if (qnorm.includes("hora")) return { respuesta: obtenerHoraActual() };
   if (qnorm.includes("fecha")) return { respuesta: obtenerFechaActual() };
 
-  // Exacta
-  const exact = cachePreguntas.find(p => p.pregunta_norm === qnorm);
-  if (exact) return exact;
+  // Exactas
+  const exactMatches = cachePreguntas.filter(p => p.pregunta_norm === qnorm);
+  if (exactMatches.length > 0) {
+    const randomIndex = Math.floor(Math.random() * exactMatches.length);
+    return exactMatches[randomIndex];
+  }
 
   // Substring
-  const substr = cachePreguntas.find(p => p.pregunta_norm.includes(qnorm));
-  if (substr) return substr;
+  const substrMatches = cachePreguntas.filter(p => p.pregunta_norm.includes(qnorm));
+  if (substrMatches.length > 0) {
+    const randomIndex = Math.floor(Math.random() * substrMatches.length);
+    return substrMatches[randomIndex];
+  }
 
   // Fuzzy
-  const res = fuse.search(qnorm, { limit: 1 });
-  return res.length ? res[0].item : null;
+  const res = fuse.search(qnorm);
+  if (res.length > 0) {
+    const bestNorm = res[0].item.pregunta_norm;
+    const fuzzyMatches = cachePreguntas.filter(p => p.pregunta_norm === bestNorm);
+    const randomIndex = Math.floor(Math.random() * fuzzyMatches.length);
+    return fuzzyMatches[randomIndex];
+  }
+
+  return null;
 }
 
 // --- Recuperar datos ---
