@@ -93,6 +93,12 @@ function notSeen(id, group=""){
   return true;
 }
 
+// === Contexto de sesión para "otro/otra/uno más"
+const lastContext = {
+  group: "",   // último grupo usado
+  lastId: "",  // último id servido
+};
+
 // ======== Nombre del usuario (memoria local) ========
 const USER_NAME_KEY = "chapi.user.name";
 function getUserName(){
@@ -107,13 +113,11 @@ function clearUserName(){
   try { localStorage.removeItem(USER_NAME_KEY); } catch {}
 }
 function hasName(){ return !!getUserName(); }
-
 function capitalizeName(s=""){
   const t = String(s).trim().toLowerCase();
   if (!t) return "";
   return t.replace(/(?:^|\s|-)([a-záéíóúñ])/g, (m, c) => m.replace(c, c.toUpperCase()));
 }
-
 /**
  * Extrae nombre de frases:
  * - hola chapi, mi nombre es X
@@ -127,7 +131,7 @@ function extractNameFromSentence(raw=""){
   let m = txt.match(/(?:#?\s*nombre\s*[:=]\s*)([A-Za-zÁÉÍÓÚÑ][\w'’áéíóúñ-]{1,30}(?:\s+[A-Za-zÁÉÍÓÚÑ][\w'’áéíóúñ-]{1,30}){0,3})/i);
   if (m) return m[1].replace(/[.,;:!?]+$/, "").trim();
 
-  // Frases naturales (tolera “hola chapi,” al inicio)
+  // Frases naturales (tolera “hola chapi,”)
   const re = new RegExp(
     String.raw`(?:^|\b)(?:hola(?:\s+\w+)*,\s*)?(?:yo\s+)?(?:me\s+llamo|mi\s+nombre\s+es|me\s+dicen|me\s+llaman|soy)\s*[:,-]?\s*` +
     String.raw`([a-záéíóúñ][a-záéíóúñ'’\-]{1,30}(?:\s+[a-záéíóúñ][a-záéíóúñ'’\-]{1,30}){0,3})`,
@@ -138,11 +142,9 @@ function extractNameFromSentence(raw=""){
 
   return "";
 }
-
 /** Personaliza salida:
- * - Reemplaza {nombre} si existe (solo si tú lo pones en tu contenido)
+ * - Reemplaza {nombre} si existe (solo si tú lo pones en tus datos)
  * - NO antepone ni repite el nombre automáticamente
- * - Si no hay nombre, borra el placeholder {nombre}
  */
 function personalize(texto){
   const name = getUserName();
@@ -158,7 +160,6 @@ const STOP = new Set("a al algo algun alguna algunos algunas ante antes aquel aq
 function keywords(s){
   return normalizeText(s).split(/\s+/).filter(w => w && w.length > 2 && !STOP.has(w));
 }
-
 // Cálculo matemático simple seguro
 function computeMath(q){
   const expr = q.replace(/,/g,".").match(/[-+/*()\d.\s]+/g)?.join("") || "";
@@ -183,14 +184,11 @@ const fuseOptions = {
   minMatchCharLength: 2,
   keys: ["pregunta", "respuesta", "pregunta_norm"]
 };
-
 function buildCache(snapshotVal) {
   const lista = [];
   if (snapshotVal && typeof snapshotVal === "object") {
     const entries = Object.entries(snapshotVal);
-    for (let i=0;i<entries.length;i++){
-      const key = entries[i][0];
-      const val = entries[i][1];
+    for (const [key, val] of entries){
       if (!val) continue;
       const pregunta = (val.pregunta != null) ? val.pregunta : key;
       const respuesta = (val.respuesta != null) ? val.respuesta : "";
@@ -200,18 +198,15 @@ function buildCache(snapshotVal) {
     }
   }
   cachePreguntas = lista;
-
   try { if (window.Fuse) /* @ts-ignore */ fuse = new Fuse(cachePreguntas, fuseOptions); }
   catch { fuse = null; }
 }
-
 // Suscripción en vivo
 const recordatoriosRef = ref(database, "recordatorios");
 onValue(recordatoriosRef, (snapshot) => buildCache(snapshot.val()));
 
 // ============ Guardar / Upsert ============
 function keyFromNorm(nq) { return encodeURIComponent(nq); }
-
 async function guardarDatos(p, r, grupo="") {
   const nq = normalizeText(p);
   const k = keyFromNorm(nq);
@@ -256,18 +251,25 @@ function knownGroups(){
 function detectRandomIntent(qnorm){
   return /\b(azar|random|cualquiera|sorprendeme|sorpréndeme)\b/.test(qnorm);
 }
+// *** Corregida: usa último grupo para "otro/otra/uno más/más" ***
 function inferGroupFromQuery(qnorm){
+  // explícitos
   let g = "";
-  const mHash = qnorm.match(/(?:^|\s)#([a-z0-9\-_]+)/);
+  const mHash  = qnorm.match(/(?:^|\s)#([a-z0-9\-_]+)/);
   const mGrupo = qnorm.match(/\bgrupo\s+(?:de\s+)?([a-z0-9\-_]+)/);
-  if (mHash) g = slugGrupo(mHash[1]);
+  if (mHash)  g = slugGrupo(mHash[1]);
   else if (mGrupo) g = slugGrupo(mGrupo[1]);
   if (g) return g;
 
-  const toksArr = qnorm.split(/\s+/);
-  const toks = new Set(toksArr);
+  // heurística: palabra exacta
+  const toks = new Set(qnorm.split(/\s+/));
   const ks = knownGroups();
-  for (let i=0;i<ks.length;i++){ const kg = ks[i]; if (kg && toks.has(kg)) return kg; }
+  for (const kg of ks){ if (kg && toks.has(kg)) return kg; }
+
+  // NUEVO: “otro/otra/uno más/más” → usa último grupo
+  if (/\b(otro|otra|otra\s+vez|uno\s+m[aá]s|m[aá]s)\b/.test(qnorm) && lastContext.group){
+    return lastContext.group;
+  }
   return "";
 }
 
@@ -315,26 +317,27 @@ function buscarPregunta(query) {
   }
 
   // Universo por grupo
-  const universe = [];
-  if (groupName){ for (const it of cachePreguntas) if (it.grupo === groupName) universe.push(it); }
-  else { for (const it of cachePreguntas) universe.push(it); }
+  const universe = groupName
+    ? cachePreguntas.filter(it => it.grupo === groupName)
+    : cachePreguntas.slice();
 
-  // 2) Exacto
+  // 2) Exacto SIN repetir
   const exactCandidates = universe.filter(it => it.pregunta_norm === qnorm);
-  const exact = firstUnseen(exactCandidates, groupName) || exactCandidates[0];
-  if (exact) return exact;
+  const exactUnseen = exactCandidates.find(it => notSeen(it.id, groupName));
+  if (exactUnseen) return exactUnseen;
+  // (si no hay exacto unseen, NO devolvemos el visto; seguimos abajo)
 
-  // 3) Fuzzy
+  // 3) Fuzzy SIN repetir
   if (fuse) {
     const res = fuse.search(query);
     if (res && res.length) {
       const ordered = res.map(r => r.item).filter(it => !groupName || it.grupo === groupName);
-      const fuzzyPick = firstUnseen(ordered, groupName) || ordered[0];
-      if (fuzzyPick) return fuzzyPick;
+      const fuzzyUnseen = ordered.find(it => notSeen(it.id, groupName));
+      if (fuzzyUnseen) return fuzzyUnseen;
     }
   }
 
-  // 4) Keywords
+  // 4) Keywords SIN repetir
   const ks = new Set(keywords(qnorm));
   if (ks.size && universe.length) {
     const ranked = [];
@@ -344,17 +347,18 @@ function buscarPregunta(query) {
       if (hits > 0) ranked.push({ item, hits });
     }
     ranked.sort((a,b)=> b.hits - a.hits || a.item.pregunta.length - b.item.pregunta.length);
-    const relPick = firstUnseen(ranked.map(x=>x.item), groupName) || (ranked[0] && ranked[0].item);
-    if (relPick) return relPick;
+    const kwUnseen = ranked.map(x=>x.item).find(it => notSeen(it.id, groupName));
+    if (kwUnseen) return kwUnseen;
   }
 
-  // 5) Grupo sin match
+  // 5) Si HAY grupo y NO hay match, NO usar azar salvo que lo pidan: intenta cualquier "unseen"
   if (groupName && !randomIntent) {
-    const unseenLeft = universe.find(it => notSeen(it.id, groupName));
-    if (!unseenLeft) return { respuesta: `Ya te mostré todo lo del grupo #${groupName}. Agrega más o pide otro grupo.` };
+    const anyUnseen = universe.find(it => notSeen(it.id, groupName));
+    if (anyUnseen) return anyUnseen;
+    return { respuesta: `Ya te mostré todo lo del grupo #${groupName}. Agrega más o pide otro grupo.` };
   }
 
-  // 6) Azar sin repetir
+  // 6) Azar SIN repetir
   if (groupName) {
     const pool = universe.filter(it => notSeen(it.id, groupName));
     if (pool.length) return pool[Math.floor(Math.random()*pool.length)];
@@ -372,7 +376,6 @@ function buscarPregunta(query) {
 // ============ Voz Masculina ============
 let preferVoiceName = localStorage.getItem("chapi.voiceName") || "";
 const preferMale = true;
-
 function pickVoice() {
   const list = speechSynthesis.getVoices() || [];
   if (!list.length) return null;
@@ -424,11 +427,10 @@ function speakChunks(texto, onend){
 
 // ============ Chat / UI ============
 let lastQuestion = "";
-
 function mostrarChat(pregunta, respuesta) {
   const chatBox = document.getElementById("chatBox");
   if (!chatBox) return;
-  const respuestaOut = personalize(respuesta); // respeta {nombre} si lo pones en tus datos
+  const respuestaOut = personalize(respuesta); // respeta {nombre}
   chatBox.innerHTML += `
     <div class="chat-bubble chat-user"><b>Tú:</b> ${esc(pregunta)}</div>
     <div class="chat-bubble chat-bot"><b>CHAPI:</b> ${esc(respuestaOut)}</div>
@@ -462,7 +464,6 @@ function recuperarDatos(q) {
     const nice = capitalizeName(saidName);
     if (!prev) {
       setUserName(nice);
-      // saludo cálido una sola vez
       const saludo = `Hola, ${nice}. ¡Qué gusto! Desde ahora te llamaré por tu nombre.`;
       mostrarChat(q, saludo);
       hablar(saludo);
@@ -474,7 +475,7 @@ function recuperarDatos(q) {
       hablar(upd);
       return;
     }
-    // Si dijo el mismo nombre que ya teníamos, seguimos flujo normal sin repetirlo.
+    // Si dijo el mismo nombre que ya teníamos, sigue flujo normal.
   }
 
   // ---- 2) Buscar respuesta normal ----
@@ -490,10 +491,17 @@ function recuperarDatos(q) {
   }
 
   const titulo = best.pregunta || q;
-  const texto = best.respuesta || "";
+  const texto  = best.respuesta || "";
+
+  // Guarda contexto para “otro/otra/más”
+  lastContext.group = (best.grupo || inferGroupFromQuery(normalizeText(q)) || "");
+  lastContext.lastId = best.id || "";
+
+  // Muestra y habla
   mostrarChat(titulo, texto);
   hablar(texto);
 
+  // Marca visto
   if (best.id) markSeen(best.id, best.grupo || "");
   const tb = document.getElementById("teachBox"); if (tb) tb.style.display = "none";
   lastQuestion = "";
