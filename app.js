@@ -31,8 +31,7 @@ function normalizeText(text) {
     .toLowerCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9+\-*/()\s¿?¡!.,;:#\[\]]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+    .replace(/\s+/g, " ").trim();
 }
 function esc(str = "") {
   return String(str)
@@ -64,7 +63,7 @@ function slugGrupo(g){
   return raw.replace(/[^a-z0-9_-]+/g, "-").replace(/-+/g,"-").replace(/^[-_]+|[-_]+$/g,"");
 }
 
-// Persistencia de “ya vistos” (no repetir) con localStorage
+// Persistencia de “ya vistos”
 const SEEN_GLOBAL_KEY = "chapi.seen.global";
 const SEEN_GROUP_PREFIX = "chapi.seen.group.";
 function loadSeen(key){
@@ -94,6 +93,66 @@ function notSeen(id, group=""){
   return true;
 }
 
+// ======== Nombre del usuario (memoria local) ========
+const USER_NAME_KEY = "chapi.user.name";
+function getUserName(){
+  try { return localStorage.getItem(USER_NAME_KEY) || ""; } catch { return ""; }
+}
+function setUserName(name){
+  const nice = capitalizeName(name);
+  try { localStorage.setItem(USER_NAME_KEY, nice); } catch {}
+  return nice;
+}
+function clearUserName(){
+  try { localStorage.removeItem(USER_NAME_KEY); } catch {}
+}
+function hasName(){ return !!getUserName(); }
+
+function capitalizeName(s=""){
+  const t = String(s).trim().toLowerCase();
+  if (!t) return "";
+  return t.replace(/(?:^|\s|-)([a-záéíóúñ])/g, (m, c) => m.replace(c, c.toUpperCase()));
+}
+
+/**
+ * Extrae nombre de frases:
+ * - hola chapi, mi nombre es X
+ * - yo me llamo X / me llaman X / me dicen X / soy X
+ * - #nombre=X  /  nombre: X
+ */
+function extractNameFromSentence(raw=""){
+  const txt = String(raw || "").trim();
+
+  // Comando explícito
+  let m = txt.match(/(?:#?\s*nombre\s*[:=]\s*)([A-Za-zÁÉÍÓÚÑ][\w'’áéíóúñ-]{1,30}(?:\s+[A-Za-zÁÉÍÓÚÑ][\w'’áéíóúñ-]{1,30}){0,3})/i);
+  if (m) return m[1].replace(/[.,;:!?]+$/, "").trim();
+
+  // Frases naturales (tolera “hola chapi,” al inicio)
+  const re = new RegExp(
+    String.raw`(?:^|\b)(?:hola(?:\s+\w+)*,\s*)?(?:yo\s+)?(?:me\s+llamo|mi\s+nombre\s+es|me\s+dicen|me\s+llaman|soy)\s*[:,-]?\s*` +
+    String.raw`([a-záéíóúñ][a-záéíóúñ'’\-]{1,30}(?:\s+[a-záéíóúñ][a-záéíóúñ'’\-]{1,30}){0,3})`,
+    "i"
+  );
+  const m2 = txt.match(re);
+  if (m2) return m2[1].replace(/[.,;:!?]+$/, "").trim();
+
+  return "";
+}
+
+/** Personaliza salida:
+ * - Reemplaza {nombre} si existe (solo si tú lo pones en tu contenido)
+ * - NO antepone ni repite el nombre automáticamente
+ * - Si no hay nombre, borra el placeholder {nombre}
+ */
+function personalize(texto){
+  const name = getUserName();
+  let out = String(texto || "");
+  if (/\{nombre\}/i.test(out)) {
+    return name ? out.replace(/\{nombre\}/gi, name) : out.replace(/\{nombre\}/gi, "");
+  }
+  return out;
+}
+
 // ===== SMART UTILS =====
 const STOP = new Set("a al algo algun alguna algunos algunas ante antes aquel aquella aquellas aquellos aqui asi aunque bien cada como con contra cual cuales cuando de del desde donde dos e el ella ellas ellos en entre era eran ese esa eso esta estas este estos fue fueron ha habia había han hasta hay la las le les lo los mas más me mi mis mientras muy ni no nos o otro otra otros otras para pero poco por porque que quien se sin sobre su sus suya suyo susya tal tambien también te ti tiene tienen tuvo un una unas unos y ya".split(/\s+/));
 function keywords(s){
@@ -105,7 +164,6 @@ function computeMath(q){
   const expr = q.replace(/,/g,".").match(/[-+/*()\d.\s]+/g)?.join("") || "";
   if (!expr || /[^\d+\-*/().\s]/.test(expr)) return null;
   try{
-    // eslint-disable-next-line no-new-func
     const val = Function('"use strict"; return (' + expr + ');')();
     if (typeof val === "number" && isFinite(val)) {
       const out = Math.round((val + Number.EPSILON) * 1e6)/1e6;
@@ -199,7 +257,6 @@ function detectRandomIntent(qnorm){
   return /\b(azar|random|cualquiera|sorprendeme|sorpréndeme)\b/.test(qnorm);
 }
 function inferGroupFromQuery(qnorm){
-  // explícitos
   let g = "";
   const mHash = qnorm.match(/(?:^|\s)#([a-z0-9\-_]+)/);
   const mGrupo = qnorm.match(/\bgrupo\s+(?:de\s+)?([a-z0-9\-_]+)/);
@@ -207,12 +264,10 @@ function inferGroupFromQuery(qnorm){
   else if (mGrupo) g = slugGrupo(mGrupo[1]);
   if (g) return g;
 
-  // heurística: si la consulta contiene una palabra que coincide EXACTO con un grupo existente
   const toksArr = qnorm.split(/\s+/);
   const toks = new Set(toksArr);
   const ks = knownGroups();
   for (let i=0;i<ks.length;i++){ const kg = ks[i]; if (kg && toks.has(kg)) return kg; }
-
   return "";
 }
 
@@ -227,7 +282,23 @@ function firstUnseen(candidates, group=""){
 
 // ============ Búsqueda HÍBRIDA con grupos y NO repetición ============
 function buscarPregunta(query) {
+  const qTrim = String(query || "").trim();
   const qnorm = normalizeText(query);
+
+  // ---- Comandos / consultas sobre NOMBRE ----
+  if (/^#\s*quien_soy$/i.test(qTrim)) {
+    const name = getUserName();
+    return { respuesta: name ? `Te llamas ${name}.` : "Aún no me has dicho tu nombre. Dime: me llamo TU NOMBRE." };
+  }
+  if (/^#\s*olvida_nombre$/i.test(qTrim)) {
+    clearUserName();
+    return { respuesta: "Listo, olvidé tu nombre. Dime “me llamo TU NOMBRE” para guardarlo de nuevo." };
+  }
+  if (/\b(c[oó]mo\s+me\s+llamo|cu[aá]l\s+es\s+mi\s+nombre|dime\s+mi\s+nombre|mi\s+nombre\?)\b/i.test(qnorm)) {
+    const name = getUserName();
+    return { respuesta: name ? `Te llamas ${name}.` : "Aún no me has dicho tu nombre. Dime: me llamo TU NOMBRE." };
+  }
+
   if (!qnorm) return null;
 
   // 0) Dinámicas
@@ -235,96 +306,66 @@ function buscarPregunta(query) {
   if (/\bfecha\b/.test(qnorm)) return { respuesta: obtenerFechaActual() };
 
   const randomIntent = detectRandomIntent(qnorm);
-  const inferredGroup = inferGroupFromQuery(qnorm);
-  const groupName = inferredGroup;
+  const groupName = inferGroupFromQuery(qnorm);
 
-  // 1) Matemáticas simples (solo si NO pidieron grupo explícito)
+  // 1) Matemáticas simples
   if (!groupName && /[\d)(+\-*/]/.test(qnorm)) {
     const m = computeMath(qnorm);
     if (m) return { respuesta: m };
   }
 
-  // Universo por grupo (si se pidió / infirió)
+  // Universo por grupo
   const universe = [];
-  if (groupName){
-    for (let i=0;i<cachePreguntas.length;i++){
-      const it = cachePreguntas[i];
-      if (it.grupo === groupName) universe.push(it);
-    }
-  } else {
-    for (let i=0;i<cachePreguntas.length;i++) universe.push(cachePreguntas[i]);
-  }
+  if (groupName){ for (const it of cachePreguntas) if (it.grupo === groupName) universe.push(it); }
+  else { for (const it of cachePreguntas) universe.push(it); }
 
-  // 2) Exacto por normalizada (en universo) y NO repetido
-  const exactCandidates = [];
-  for (let i=0;i<universe.length;i++){
-    if (universe[i].pregunta_norm === qnorm) exactCandidates.push(universe[i]);
-  }
+  // 2) Exacto
+  const exactCandidates = universe.filter(it => it.pregunta_norm === qnorm);
   const exact = firstUnseen(exactCandidates, groupName) || exactCandidates[0];
   if (exact) return exact;
 
-  // 3) Fuzzy (preferimos del universo) y NO repetido
+  // 3) Fuzzy
   if (fuse) {
     const res = fuse.search(query);
     if (res && res.length) {
-      const ordered = [];
-      for (let i=0;i<res.length;i++){
-        const it = res[i].item;
-        if (!groupName || it.grupo === groupName) ordered.push(it);
-      }
+      const ordered = res.map(r => r.item).filter(it => !groupName || it.grupo === groupName);
       const fuzzyPick = firstUnseen(ordered, groupName) || ordered[0];
       if (fuzzyPick) return fuzzyPick;
     }
   }
 
-  // 4) Relacionados por keywords (en universo) y NO repetido
+  // 4) Keywords
   const ks = new Set(keywords(qnorm));
   if (ks.size && universe.length) {
     const ranked = [];
-    for (let i=0;i<universe.length;i++){
-      const item = universe[i];
+    for (const item of universe){
       const words = item.pregunta_norm.split(/\s+/);
-      let hits = 0;
-      for (let j=0;j<words.length;j++){ if (ks.has(words[j])) hits++; }
+      let hits = 0; for (const w of words) if (ks.has(w)) hits++;
       if (hits > 0) ranked.push({ item, hits });
     }
     ranked.sort((a,b)=> b.hits - a.hits || a.item.pregunta.length - b.item.pregunta.length);
-    const onlyItems = ranked.map(x=>x.item);
-    const relPick = firstUnseen(onlyItems, groupName) || onlyItems[0];
+    const relPick = firstUnseen(ranked.map(x=>x.item), groupName) || (ranked[0] && ranked[0].item);
     if (relPick) return relPick;
   }
 
-  // 5) Si HAY grupo inferido y NO hay match, NO usar azar salvo que lo pidan.
+  // 5) Grupo sin match
   if (groupName && !randomIntent) {
-    let unseenLeft = null;
-    for (let i=0;i<universe.length;i++){ if (notSeen(universe[i].id, groupName)){ unseenLeft = universe[i]; break; } }
-    if (!unseenLeft) {
-      return { respuesta: `Ya te mostré todo lo del grupo #${groupName}. Agrega más o pide otro grupo.` };
-    }
+    const unseenLeft = universe.find(it => notSeen(it.id, groupName));
+    if (!unseenLeft) return { respuesta: `Ya te mostré todo lo del grupo #${groupName}. Agrega más o pide otro grupo.` };
   }
 
-  // 6) Azar SIN repetir (solo si el usuario lo pidió o no hay match)
+  // 6) Azar sin repetir
   if (groupName) {
-    const pool = [];
-    for (let i=0;i<universe.length;i++){ if (notSeen(universe[i].id, groupName)) pool.push(universe[i]); }
-    if (pool.length){
-      const pick = pool[Math.floor(Math.random()*pool.length)];
-      return pick;
-    } else {
-      return { respuesta: `No quedan elementos nuevos en #${groupName}.` };
-    }
+    const pool = universe.filter(it => notSeen(it.id, groupName));
+    if (pool.length) return pool[Math.floor(Math.random()*pool.length)];
+    return { respuesta: `No quedan elementos nuevos en #${groupName}.` };
   } else if (randomIntent) {
-    const pool = [];
-    for (let i=0;i<cachePreguntas.length;i++){ if (notSeen(cachePreguntas[i].id, "")) pool.push(cachePreguntas[i]); }
-    if (pool.length){
-      const pick = pool[Math.floor(Math.random()*pool.length)];
-      return pick;
-    } else {
-      return { respuesta: "No quedan elementos nuevos para mostrar. Agrega más contenido." };
-    }
+    const pool = cachePreguntas.filter(it => notSeen(it.id, ""));
+    if (pool.length) return pool[Math.floor(Math.random()*pool.length)];
+    return { respuesta: "No quedan elementos nuevos para mostrar. Agrega más contenido." };
   }
 
-  // 7) Si nada funcionó y no es azar: ofrecer aprendizaje
+  // 7) Nada
   return null;
 }
 
@@ -335,40 +376,28 @@ const preferMale = true;
 function pickVoice() {
   const list = speechSynthesis.getVoices() || [];
   if (!list.length) return null;
-
   if (preferVoiceName) {
-    for (let i=0;i<list.length;i++){ if (list[i].name === preferVoiceName) return list[i]; }
+    const keep = list.find(v => v.name === preferVoiceName);
+    if (keep) return keep;
   }
   const candidates = list.filter(v => /es(-|_)?(PE|ES|MX|US)?/i.test(v.lang));
   const maleNames = /(male|hombre|miguel|jorge|diego|carlos|enrique|pablo|sergio|jaime|antonio|alberto|ramon|fernando|gonzalo|lucas)/i;
-
   let chosen = null;
-  if (preferMale){
-    for (let i=0;i<candidates.length;i++){ if (maleNames.test(candidates[i].name)) { chosen = candidates[i]; break; } }
-    if (!chosen) chosen = candidates[0] || list[0];
-  } else {
-    chosen = candidates[0] || list[0];
-  }
-
-  if (chosen) {
-    preferVoiceName = chosen.name;
-    localStorage.setItem("chapi.voiceName", preferVoiceName);
-  }
+  if (preferMale){ chosen = candidates.find(v => maleNames.test(v.name)) || candidates[0] || list[0]; }
+  else { chosen = candidates[0] || list[0]; }
+  if (chosen) { preferVoiceName = chosen.name; localStorage.setItem("chapi.voiceName", preferVoiceName); }
   return chosen;
 }
-
 function speakChunks(texto, onend){
   try {
     window.speechSynthesis.cancel();
     const parts = String(texto).split(/([.!?]+)\s+/);
     const chunks = [];
-    for (let i=0;i<parts.length;i++){
-      const part = parts[i];
+    for (const part of parts){
       if (!part || !part.trim()) continue;
       if (/[.!?]+/.test(part) && chunks.length) chunks[chunks.length-1] += part + " ";
       else chunks.push(part.trim());
     }
-
     let i = 0;
     const playNext = ()=>{
       if (i >= chunks.length) { onend && onend(); return; }
@@ -381,8 +410,6 @@ function speakChunks(texto, onend){
     playNext();
   } catch {}
 }
-
-// Precalienta voces
 (function initVoices(){
   try{
     if ('speechSynthesis' in window) {
@@ -401,21 +428,21 @@ let lastQuestion = "";
 function mostrarChat(pregunta, respuesta) {
   const chatBox = document.getElementById("chatBox");
   if (!chatBox) return;
+  const respuestaOut = personalize(respuesta); // respeta {nombre} si lo pones en tus datos
   chatBox.innerHTML += `
     <div class="chat-bubble chat-user"><b>Tú:</b> ${esc(pregunta)}</div>
-    <div class="chat-bubble chat-bot"><b>CHAPI:</b> ${esc(respuesta)}</div>
+    <div class="chat-bubble chat-bot"><b>CHAPI:</b> ${esc(respuestaOut)}</div>
   `;
   chatBox.scrollTop = chatBox.scrollHeight;
   const modal = document.getElementById("chatModal");
   if (modal) modal.style.display = "block";
 }
-
 function hablar(texto) {
   if (!('speechSynthesis' in window)) return;
-  speakChunks(texto);
+  speakChunks(personalize(texto));
 }
 
-// Separar “Respuesta | grupo” si el usuario lo pega en Respuesta
+// Separar “Respuesta | grupo”
 function splitRespuestaGrupo(respuesta) {
   let r = (respuesta || "").trim();
   let g = "";
@@ -428,6 +455,29 @@ function splitRespuestaGrupo(respuesta) {
 }
 
 function recuperarDatos(q) {
+  // ---- 1) Detectar nombre y saludar SOLO si es la primera vez o si cambió ----
+  const saidName = extractNameFromSentence(q);
+  if (saidName) {
+    const prev = getUserName();
+    const nice = capitalizeName(saidName);
+    if (!prev) {
+      setUserName(nice);
+      // saludo cálido una sola vez
+      const saludo = `Hola, ${nice}. ¡Qué gusto! Desde ahora te llamaré por tu nombre.`;
+      mostrarChat(q, saludo);
+      hablar(saludo);
+      return; // ya respondimos esta interacción con el saludo
+    } else if (prev && prev !== nice) {
+      setUserName(nice);
+      const upd = `Perfecto, actualicé tu nombre a ${nice}.`;
+      mostrarChat(q, upd);
+      hablar(upd);
+      return;
+    }
+    // Si dijo el mismo nombre que ya teníamos, seguimos flujo normal sin repetirlo.
+  }
+
+  // ---- 2) Buscar respuesta normal ----
   const best = buscarPregunta(q);
 
   if (!best) {
@@ -493,122 +543,74 @@ function ocultar(id){ const el = byId(id); if (el) el.style.display = "none"; }
 
 safeOnClick("btnVoz", startVoice);
 safeOnClick("micBtn", startVoice);
-
 safeOnClick("btnAgregar", () => mostrar("modalAgregar"));
 safeOnClick("closeAgregar", () => ocultar("modalAgregar"));
 safeOnClick("closeChat", () => ocultar("chatModal"));
 safeOnClick("btnConsultar", () => mostrar("modalConsultar"));
 safeOnClick("closeConsultar", () => ocultar("modalConsultar"));
 
-// Guardar una — con defensa “Respuesta | grupo”
+// Guardar una
 safeOnClick("guardarBtn", async () => {
   const p = byId("inputPregunta") ? byId("inputPregunta").value.trim() : "";
   const rRaw = byId("inputRespuesta") ? byId("inputRespuesta").value.trim() : "";
   const gInput = byId("inputGrupo") ? byId("inputGrupo").value.trim() : "";
-
   const sr = splitRespuestaGrupo(rRaw);
   const r = sr.r;
   const g = gInput || sr.g;
-
   if (!p || !r) { toast("Completa pregunta y respuesta"); return; }
-
   try{
     await guardarDatos(p, r, g);
     toast("¡Guardado! ✅");
-    const ids = ["inputPregunta","inputRespuesta","inputGrupo"];
-    for (let i=0;i<ids.length;i++){ const el = byId(ids[i]); if (el) el.value = ""; }
+    for (const id of ["inputPregunta","inputRespuesta","inputGrupo"]) { const el = byId(id); if (el) el.value = ""; }
     ocultar("modalAgregar");
   }catch{}
 });
 
-// ---------- PARSER ROBUSTO ----------
+// Parser de lote
 function parseLinea(raw){
-  // Pregunta | Respuesta | Grupo (opcional)
   const m = raw.match(/^(.*?)\s*\|\s*(.*?)\s*(?:\|\s*([a-z0-9\-_#]+))?\s*$/i);
   if (!m) return null;
-
   let p = (m[1] || "").trim();
   let r = (m[2] || "").trim();
   let g = (m[3] || "").trim();
-
-  // Si por error pegaron "Respuesta | grupo" dentro de r, lo cortamos:
   const cola = r.match(/\|\s*([a-z0-9\-_#]+)\s*$/i);
-  if (cola && !g) {
-    g = cola[1];
-    r = r.replace(/\|\s*([a-z0-9\-_#]+)\s*$/i, "").trim();
-  }
-
+  if (cola && !g) { g = cola[1]; r = r.replace(/\|\s*([a-z0-9\-_#]+)\s*$/i, "").trim(); }
   g = slugGrupo(g);
   return { p, r, g };
 }
-
-// Guardar varias — parser con regex (Pregunta | Respuesta | Grupo?)
 safeOnClick("guardarLoteBtn", async () => {
-  const area = byId("inputLote");
-  if (!area) return;
-  const t = area.value.trim();
-  if (!t) return;
-
+  const area = byId("inputLote"); if (!area) return;
+  const t = area.value.trim(); if (!t) return;
   const lines = t.split("\n").map(l=>l.trim()).filter(Boolean);
-  let ok = 0, fail = 0;
-  const errores = [];
-
+  let ok = 0, fail = 0; const errores = [];
   for (let i=0;i<lines.length;i++){
-    const raw = lines[i];
-    const parsed = parseLinea(raw);
-    if (!parsed || !parsed.p || !parsed.r){
-      fail++; errores.push(`Línea ${i+1}: formato inválido`);
-      continue;
-    }
-    // Chequeo duro: la respuesta NO debe terminar con "| algo"
-    if (/\|\s*[a-z0-9\-_#]+\s*$/i.test(parsed.r)){
-      fail++; errores.push(`Línea ${i+1}: el grupo quedó pegado a la respuesta`);
-      continue;
-    }
-    try {
-      await guardarDatos(parsed.p, parsed.r, parsed.g);
-      ok++;
-    } catch {
-      fail++; errores.push(`Línea ${i+1}: error al guardar`);
-    }
+    const parsed = parseLinea(lines[i]);
+    if (!parsed || !parsed.p || !parsed.r){ fail++; errores.push(`Línea ${i+1}: formato inválido`); continue; }
+    if (/\|\s*[a-z0-9\-_#]+\s*$/i.test(parsed.r)){ fail++; errores.push(`Línea ${i+1}: el grupo quedó pegado a la respuesta`); continue; }
+    try { await guardarDatos(parsed.p, parsed.r, parsed.g); ok++; }
+    catch { fail++; errores.push(`Línea ${i+1}: error al guardar`); }
   }
-
-  if (ok) {
-    toast(`Cargadas ${ok}${fail?` • Fallidas: ${fail}`:""}`);
-    area.value = "";
-    ocultar("modalAgregar");
-  } else {
-    toast("No se pudo cargar. Revisa los errores.");
-  }
-
-  if (errores.length){
-    console.warn("Problemas al cargar:", errores);
-    try{ alert("Errores:\n- " + errores.join("\n- ")); }catch{}
-  }
+  if (ok) { toast(`Cargadas ${ok}${fail?` • Fallidas: ${fail}`:""}`); area.value = ""; ocultar("modalAgregar"); }
+  else { toast("No se pudo cargar. Revisa los errores."); }
+  if (errores.length){ console.warn("Problemas al cargar:", errores); try{ alert("Errores:\n- " + errores.join("\n- ")); }catch{} }
 });
 
-// Consultar manual
+// Consultar
 safeOnClick("consultarBtn", () => {
   const el = byId("consultaPregunta");
   const q = el ? el.value.trim() : "";
-  if (q) {
-    recuperarDatos(q);
-    ocultar("modalConsultar");
-  } else {
-    toast("Escribe una pregunta");
-  }
+  if (q) { recuperarDatos(q); ocultar("modalConsultar"); }
+  else { toast("Escribe una pregunta"); }
 });
 
-// Guardar enseñanza — con defensa “Respuesta | grupo”
+// Enseñar desde chat
 safeOnClick("teachBtn", async () => {
   const inp = byId("teachInput");
   const rRaw = inp ? inp.value.trim() : "";
   const gInput = byId("teachGrupo") ? byId("teachGrupo").value.trim() : "";
-
   const sr = splitRespuestaGrupo(rRaw);
   const r = sr.r;
   const g = gInput || sr.g;
-
   if (lastQuestion && r) {
     try{
       await guardarDatos(lastQuestion, r, g);
@@ -630,13 +632,13 @@ window.addEventListener("click", (event)=>{
   }
 });
 
-// Enter rápido
+// Enters
 const cq = byId("consultaPregunta");
 if (cq) cq.addEventListener("keydown", e=>{ if (e.key === "Enter") { const b = byId("consultarBtn"); if (b) b.click(); } });
 const ti = byId("teachInput");
 if (ti) ti.addEventListener("keydown", e=>{ if (e.key === "Enter") { const b = byId("teachBtn"); if (b) b.click(); } });
 
-// Mensaje primera vez
+// Primera vez (no dice nombre)
 (function firstRunTip(){
   try{
     const K = "chapi.meta";
@@ -646,7 +648,7 @@ if (ti) ti.addEventListener("keydown", e=>{ if (e.key === "Enter") { const b = b
       const modal = byId("chatModal");
       if (chatBox && modal){
         modal.style.display = "block";
-        chatBox.innerHTML += `<div class="chat-bubble chat-bot"><b>CHAPI:</b> Soy CHAPI. Pruébame con "#historia", "grupo chiste", o "cuéntame una anécdota".</div>`;
+        chatBox.innerHTML += `<div class="chat-bubble chat-bot"><b>CHAPI:</b> Hola. Si quieres, dime “hola chapi, mi nombre es TU NOMBRE” o “yo me llamo TU NOMBRE”. También puedes preguntar “¿cómo me llamo?” para que te lo recuerde.</div>`;
         chatBox.scrollTop = chatBox.scrollHeight;
       }
       meta.tipShown = true;
