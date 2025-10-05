@@ -4,9 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>CHAPI</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <link rel="icon" href="friends.png" type="image/png">
   <link rel="manifest" href="manifest.json" />
+
+  <!-- Iconos -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+  <!-- Fuse.js (tu versión). El módulo JS cargará otra sólo si no existe. -->
   <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
 
 <style>
@@ -69,54 +73,85 @@
 </head>
 <body>
   <div class="container">
-    <h1><i class="fas fa-robot"></i> ¡Hola! Soy CHAPI</h1>
+    <h1><i class="fas fa-robot" aria-hidden="true"></i> ¡Hola! Soy CHAPI</h1>
 
     <!-- Botones principales -->
-    <button id="btnAgregar"><i class="fas fa-plus-circle"></i> Agregar pregunta</button>
-    <button id="btnConsultar"><i class="fas fa-search"></i> Consultar pregunta</button>
+    <button id="btnAgregar" aria-controls="modalAgregar"><i class="fas fa-plus-circle"></i> Agregar pregunta</button>
+    <button id="btnConsultar" aria-controls="modalConsultar"><i class="fas fa-search"></i> Consultar pregunta</button>
     <button id="btnVoz"><i class="fas fa-microphone"></i> Hablar pregunta</button>
-    <p>Agrega tus preguntas y CHAPI las recordará para ti.</p>
+    <p style="margin-top:8px">Agrega tus preguntas y CHAPI las recordará para ti.</p>
 
     <!-- Modal Agregar -->
-    <div id="modalAgregar" class="modal">
+    <div id="modalAgregar" class="modal" role="dialog" aria-modal="true" aria-labelledby="agregarTitle">
       <div class="modal-content">
-        <span class="close" id="closeAgregar">&times;</span>
-        <h2>Agregar nuevas preguntas</h2>
-        <input type="text" id="inputPregunta" placeholder="Escribe una pregunta">
-        <input type="text" id="inputRespuesta" placeholder="Escribe la respuesta">
-        <textarea id="inputLote" rows="6" placeholder="Pega varias preguntas aquí&#10;Formato: Pregunta|Respuesta"></textarea>
-        <button id="guardarBtn">Guardar una</button>
-        <button id="guardarLoteBtn">Guardar varias</button>
+        <span class="close" id="closeAgregar" aria-label="Cerrar">&times;</span>
+        <h2 id="agregarTitle" style="margin-top:0;">Agregar nuevas preguntas</h2>
+
+        <div class="field">
+          <label for="inputPregunta">Pregunta</label>
+          <input type="text" id="inputPregunta" placeholder="Escribe una pregunta" autocomplete="off">
+        </div>
+
+        <div class="field">
+          <label for="inputRespuesta">Respuesta</label>
+          <input type="text" id="inputRespuesta" placeholder="Escribe la respuesta" autocomplete="off">
+        </div>
+
+        <div class="field">
+          <label for="inputGrupo">Grupo (opcional)</label>
+          <input type="text" id="inputGrupo" placeholder="Ej: cuento, datos, salud, etc." autocomplete="off">
+          <div class="hint">Si no quieres agrupar, déjalo vacío.</div>
+        </div>
+
+        <div class="field">
+          <label for="inputLote">Cargar varias</label>
+          <textarea id="inputLote" rows="6" placeholder="Pega varias líneas con el formato:&#10;Pregunta | Respuesta | Grupo (opcional)"></textarea>
+        </div>
+
+        <button id="guardarBtn"><i class="fas fa-save"></i> Guardar una</button>
+        <button id="guardarLoteBtn"><i class="fas fa-layer-group"></i> Guardar varias</button>
       </div>
     </div>
 
     <!-- Modal Consultar -->
-    <div id="modalConsultar" class="modal">
+    <div id="modalConsultar" class="modal" role="dialog" aria-modal="true" aria-labelledby="consultarTitle">
       <div class="modal-content">
-        <span class="close" id="closeConsultar">&times;</span>
-        <h2>Consultar una pregunta</h2>
-        <input type="text" id="consultaPregunta" placeholder="Escribe tu pregunta">
-        <button id="consultarBtn">Consultar</button>
+        <span class="close" id="closeConsultar" aria-label="Cerrar">&times;</span>
+        <h2 id="consultarTitle" style="margin-top:0;">Consultar una pregunta</h2>
+        <input type="text" id="consultaPregunta" placeholder="Escribe tu pregunta" autocomplete="off" aria-label="Pregunta a consultar">
+        <button id="consultarBtn"><i class="fas fa-search"></i> Consultar</button>
       </div>
     </div>
 
     <!-- Modal Chat emergente -->
-    <div id="chatModal" class="modal">
+    <div id="chatModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="chatTitle">
       <div class="modal-content">
-        <span class="close" id="closeChat">&times;</span>
-        <div id="chatBox"></div>
+        <span class="close" id="closeChat" aria-label="Cerrar">&times;</span>
+        <h2 id="chatTitle" style="margin:0 0 10px; color:#222;">Chat</h2>
+
+        <div id="chatBox" aria-live="polite" aria-label="Conversación"></div>
+
+        <!-- Enseñar cuando no hay match -->
         <div id="teachBox" style="display:none; margin-top:15px;">
-          <input type="text" id="teachInput" placeholder="Escribe la respuesta aquí">
-          <button id="teachBtn">Guardar respuesta</button>
+          <div class="field">
+            <label for="teachInput">No encontré esa respuesta. Enséñamela:</label>
+            <input type="text" id="teachInput" placeholder="Escribe la respuesta aquí" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="teachGrupo">Grupo (opcional)</label>
+            <input type="text" id="teachGrupo" placeholder="Ej: cuento, datos, salud..." autocomplete="off">
+          </div>
+          <button id="teachBtn"><i class="fas fa-book-reader"></i> Guardar respuesta</button>
         </div>
-        <button id="micBtn"><i class="fas fa-microphone"></i></button>
+
+        <button id="micBtn" title="Hablar" aria-label="Hablar con voz"><i class="fas fa-microphone"></i></button>
       </div>
     </div>
 
-    <p id="voiceStatus"></p>
+    <p id="voiceStatus" aria-live="polite"></p>
   </div>
 
-  <!-- Script externo -->
+  <!-- Script principal -->
   <script type="module" src="app.js"></script>
 </body>
 </html>
